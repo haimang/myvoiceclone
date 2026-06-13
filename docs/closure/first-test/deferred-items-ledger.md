@@ -105,3 +105,19 @@
 - **证据**：first-test 以 adapter metadata/preflight 与 `MOCK_ADAPTERS` 真实隔离为主，未冻结 fakes
 - **触发器**：adapter Protocol/ABC 冻结
 - **目标阶段**：`second-build`
+
+---
+
+## 3. Review-R1 追加承接项（2026-06-13）
+
+> 来源：`docs/code-review/first-test/FT1-FT8-review-VF-ledger.md` §5.4。这里只登记本轮独立核验后确认为真实、必要、但不应伪装成 first-test 已完成的 deferred。
+
+| ID | 类型 | 状态 | 简要问题 | 触发器 | 目标阶段 |
+|----|------|------|----------|--------|----------|
+| FTD-11 | C | pending-live | FT6 live HTTP socket smoke 仍只有 gated placeholder | owner 要求 socket-level HTTP proof，且允许启动 uvicorn/httpx live test | live-verification |
+| FTD-12 | C | pending-live | FT7 live capstone 真实执行体仍依赖 owner 音频、模型/cache/token/license | `RUN_FIRST_TEST_CAPSTONE=1` + 合法短音频 + 模型/cache/token 完备 | live-verification |
+| FTD-13 | B | retained | runner/API 自动 stdout/stderr/stack trace evidence 采集未接入 | 非 skipped capstone 失败需要离线调试证据 | evidence-hardening |
+| FTD-14 | B | retained | pipeline/adapter/service 层结构化日志覆盖不足 | live debugging 或 ops readiness 进入目标 | observability-hardening |
+| FTD-15 | B | retained | DB schema 与 first-build final plan canonical 列名/索引仍有兼容层漂移 | schema contract freeze 或 second-build migration pass | schema-hardening |
+| FTD-16 | B | retained | `pipeline_runs` 仍未作为生产 workflow ledger 写入 | audit/resume UI 或多 job workflow timeline 成为目标 | workflow-ledger |
+| FTD-17 | A | retained | SoVITS/RVC 真实训练仍未消费 frozen dataset manifest | first-test 之后要求真实训练，而非真实推理闭环 | training-phase |

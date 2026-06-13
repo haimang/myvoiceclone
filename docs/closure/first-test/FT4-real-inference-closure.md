@@ -21,12 +21,12 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| FT4-P1-01 推理输入输出合同 | ✅ closed | `working tree @ 4e4ca3b` + `tests/unit/pipelines/test_real_inference_wrapper.py::test_inference_contract_requires_text_and_reference` + `2026-06-13 08:38 UTC` |
-| FT4-P1-02 no mock fallback | ✅ closed | `working tree @ 4e4ca3b` + `tests/unit/adapters/test_xtts_adapter.py::test_xtts_real_mode_no_mock_fallback` + `2026-06-13 08:38 UTC` |
-| FT4-P2-01 real adapter wrapper | ✅ closed | `working tree @ 4e4ca3b` + `tests/unit/pipelines/test_real_inference_wrapper.py::test_real_inference_wrapper_writes_artifact_metadata` + `2026-06-13 08:38 UTC` |
-| FT4-P2-02 model manifest/cache/license | ✅ closed | `working tree @ 4e4ca3b` + `tests/unit/adapters/test_xtts_adapter.py::test_xtts_model_manifest_records_license` + `2026-06-13 08:38 UTC` |
-| FT4-P2-03 inference artifact metadata | ✅ closed | `working tree @ 4e4ca3b` + `tests/unit/pipelines/test_real_inference_wrapper.py` + `2026-06-13 08:38 UTC` |
-| FT4-P3-01 CLI inference smoke | ✅ closed | `working tree @ 4e4ca3b` + `tests/cli/test_cli.py::test_cli_real_inference_smoke` + `2026-06-13 08:38 UTC` |
+| FT4-P1-01 推理输入输出合同 | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/pipelines/test_real_inference_wrapper.py::test_inference_contract_requires_text_and_reference` + `2026-06-13 08:38 UTC` |
+| FT4-P1-02 no mock fallback | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/adapters/test_xtts_adapter.py::test_xtts_real_mode_no_mock_fallback` + `2026-06-13 08:38 UTC` |
+| FT4-P2-01 real adapter wrapper | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/pipelines/test_real_inference_wrapper.py::test_real_inference_wrapper_writes_artifact_metadata` + `2026-06-13 08:38 UTC` |
+| FT4-P2-02 model manifest/cache/license | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/adapters/test_xtts_adapter.py::test_xtts_model_manifest_records_license` + `2026-06-13 08:38 UTC` |
+| FT4-P2-03 inference artifact metadata | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/pipelines/test_real_inference_wrapper.py` + `2026-06-13 08:38 UTC` |
+| FT4-P3-01 CLI inference smoke | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/cli/test_cli.py::test_cli_real_inference_smoke` + `2026-06-13 08:38 UTC` |
 | FT4-P3-02 live/slow real inference smoke | ⏸ pending | code present; live model/cache not executed in this environment |
 
 ## 2. Evidence / Validation 矩阵
@@ -60,7 +60,7 @@
 | 收口纪律 | 兑现声明 |
 |----------|----------|
 | 每个 ✅ 归类 5 态（verified / observed-OK-at-closure / partial / 未观察 / deferred）| ✅ `observed-OK-at-closure`，fake-real 短途测试已通过；live 标 pending |
-| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `working tree @ 4e4ca3b`，本轮未请求 commit |
+| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 31b4a04`，本轮未请求 commit |
 | scope diff 守卫（`git diff --stat` 与 in-scope 一致，无越界修改）| ✅ 改动限 FT4 AP 指定 adapters/inference/service/API/CLI/scripts/tests |
 | deferred 已三分类（A/B/C）且每项有承接位置 | ✅ |
 | owner-test 项未经 owner 复测的标 ⏸ PENDING（无「我修了」式宣称）| N/A |

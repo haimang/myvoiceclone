@@ -278,10 +278,10 @@ FT1 Preflight
 | FT1-T01 | CLI/doc command drift | 短途 | unit/cli | 🔱 fork `tests/cli/test_cli.py` | FT1-P1-01 → 命令一致 | commit + pytest + run-time |
 | FT1-T02 | bootstrap extras probe | 短途 | unit/script | 🔱 fork `tests/unit/test_scripts_dry_run.py` | FT1-P1-02 → extras 安装 | commit + pytest + run-time |
 | FT1-T03 | env resolver drift | 短途 | unit/config | 🔱 fork `tests/unit/test_project_config.py` | FT1-P1-03 → env 对齐 | commit + pytest + run-time |
-| FT1-T04 | CLI preprocess payload | 短途 | unit/cli/jobs | 🆕 新增 `tests/cli/test_preprocess_entry.py` | FT1-P2-01 → payload 可消费 | commit + pytest + run-time |
-| FT1-T05 | API preprocess job creation | 短途 | api/TestClient | 🆕 新增 `tests/api/test_preprocess_jobs.py` | FT1-P2-02 → pending job | commit + pytest + run-time |
+| FT1-T04 | CLI preprocess payload | 短途 | unit/cli/jobs | 🆕 新增 `tests/cli/test_cli.py::test_cli_preprocess_all_payload` | FT1-P2-01 → payload 可消费 | commit + pytest + run-time |
+| FT1-T05 | API preprocess job creation | 短途 | api/TestClient | 🆕 新增 `tests/api/test_routes.py::test_create_preprocess_job` | FT1-P2-02 → pending job | commit + pytest + run-time |
 | FT1-T06 | empty manifest guard | 短途 | unit/pipeline | 🔱 fork `tests/unit/pipelines/test_export_dataset.py` | FT1-P3-01 → no fake-zero | commit + pytest + run-time |
-| FT1-T07 | artifact root resolver | 短途 | api/unit | 🆕 新增 `tests/api/test_job_artifact_root.py` | FT1-P3-02 → env root | commit + pytest + run-time |
+| FT1-T07 | artifact root resolver | 短途 | api/unit | 🆕 新增 `tests/api/test_first_test_preflight.py::test_run_job_uses_env_artifact_root` | FT1-P3-02 → env root | commit + pytest + run-time |
 
 ### 8.2 复用台账
 
