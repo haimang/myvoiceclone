@@ -278,6 +278,13 @@ FT5 Real Evaluation
 
 ### 8.2 复用策略
 
+---
+
+## 9. 执行工作日志
+
+- `2026-06-13 08:41 UTC` — [代码制作] 完成 FT5-P1/P2/P3：新增 `eval/smoke.py` deterministic wav smoke metrics；objective proxy 增加 explicit unavailable 语义；objective mock metrics 写 `metric_source=mock` 且 `quality_gate_eligible=false`；subjective MOS/ABX 增加 reviewer/comment/sample artifact validation 与 eval_samples linkage；新增 `POST /api/reports/subjective`；release gate 增加 `smoke_pass/quality_pass/manual_waived/blocked_reasons` 分层，mock metric 不可作为 real quality pass。
+- `2026-06-13 08:41 UTC` — [代码审查，测试与文档回填] 新增/扩展 smoke metrics、objective proxy unavailable、subjective validation/API、release gate mock-blocking tests；执行 `./venv/bin/python -m pytest tests/unit/eval/test_smoke_metrics.py tests/unit/eval/test_objective.py tests/unit/eval/test_subjective.py tests/api/test_release_gate.py tests/api/test_routes.py tests/api/test_audit_trace.py -q`，结果 `23 passed, 2 warnings`；执行 FT1-FT5 合并短途 suite，结果 `76 passed, 1 skipped, 4 warnings`；执行 `python3 -m compileall -q src tests` 通过。
+
 | 可复用对象 | 复用方式 | 改动要求 |
 |------------|----------|----------|
 | `src/myvoiceclone/eval/objective.py` | 复用 degraded result 形态 | 增加 source/mode 字段 |

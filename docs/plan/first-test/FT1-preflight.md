@@ -258,6 +258,13 @@ FT1 Preflight
 ### 7.3 上游真源指针 + 安全项威胁模型
 
 - **独立 reference-anchor**：`docs/eval/first-test/reference-anchor.md`。
+
+---
+
+## 9. 执行工作日志
+
+- `2026-06-13 08:26 UTC` — [代码制作] 完成 FT1-P1/P2/P3：统一 README/ops 命令为 `myvoiceclone`；新增 `first-test` extra 与 bootstrap dependency probe；`.env.example` 对齐 `DB_PATH/ARTIFACT_ROOT/MODELS_DIR/MOCK_ADAPTERS`；新增 CLI `run preprocess-all`，并让 `run diarize` 只创建单步 diarize job；新增 `POST /api/recordings/preprocess`；`routes_jobs` 改用 `resolve_artifact_root()`；dataset freeze 拒绝空 manifest。
+- `2026-06-13 08:26 UTC` — [代码审查，测试与文档回填] 新增/扩展 FT1 测试覆盖 CLI payload、API preprocess job、runtime env resolvers、bootstrap dry-run、README command drift、empty manifest guard、API artifact root env resolver；执行 `./venv/bin/python -m pytest tests/cli/test_cli.py tests/api/test_routes.py tests/api/test_first_test_preflight.py tests/unit/test_project_config.py tests/unit/test_scripts_dry_run.py tests/unit/pipelines/test_export_dataset.py tests/unit/test_first_test_command_docs.py -q`，结果 `25 passed, 3 warnings`；执行 `./venv/bin/python -m pytest tests/unit/test_architecture_boundaries.py -q`，结果 `1 passed`。
 - **安全 / 信任边界类工作项的威胁模型锚**：真实音频路径与 artifact root 是本 AP 信任边界。威胁是 path/env drift 导致读写非预期位置或 repo 内落大文件；锚定 `docs/eval/first-test/reference-anchor.md:189-195` 与 `src/myvoiceclone/config.py:42-68`。
 
 ---

@@ -278,6 +278,13 @@ FT4 Real Inference
 
 ### 8.2 复用台账
 
+---
+
+## 9. 执行工作日志
+
+- `2026-06-13 08:38 UTC` — [代码制作] 完成 FT4-P1/P2/P3：XTTS adapter 增加 metadata/preflight/model manifest 与 `synth_to_file()` real wrapper；RVC real conversion 禁止 mock fallback；新增 `pipelines/infer_real.py`，定义 `RealInferenceRequest`、contract validation 与 `text/reference/model -> rendered_audio artifact` 输出；新增 service/API `POST /api/inference/real` 与 CLI `myvoiceclone infer real`；inference artifact metadata 写 input refs、model/device/cache/license/provenance/config/duration；`download_models.sh` 写 first-test model manifest 语义。
+- `2026-06-13 08:38 UTC` — [代码审查，测试与文档回填] 新增/扩展 XTTS no-fallback、model manifest、fake-real inference wrapper、API/CLI real inference、download_models dry-run、artifact store metadata tests；执行 `./venv/bin/python -m pytest tests/unit/adapters/test_xtts_adapter.py tests/unit/adapters/test_rvc_adapter.py tests/unit/pipelines/test_real_inference_wrapper.py tests/api/test_inference_routes.py tests/cli/test_cli.py tests/unit/test_scripts_dry_run.py tests/unit/storage/test_artifact_store.py tests/unit/test_architecture_boundaries.py -q`，结果 `22 passed, 2 warnings`；执行 FT1-FT4 合并短途 suite，结果 `61 passed, 1 skipped, 4 warnings`；执行 `python3 -m compileall -q src tests` 通过。
+
 | 既有用例 | 处置 | 改动 | 起跑线状态 |
 |----------|------|------|------------|
 | `tests/unit/adapters/test_xtts_adapter.py` | 🔱 fork | assert NotImplemented/no fake in real mode | 已存在 |

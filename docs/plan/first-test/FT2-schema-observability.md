@@ -278,6 +278,13 @@ FT2 Schema/Observability
 ### 8.2 复用台账
 
 | 既有用例 | 处置 | 改动 | 起跑线状态 |
+
+---
+
+## 9. 执行工作日志
+
+- `2026-06-13 08:31 UTC` — [代码制作] 完成 FT2-P1/P2/P3：新增 `008_first_test_observability.sql`，为 `job_events` 增加 `metadata_json` 与 event index；扩展 `JobEvent`、`JobRepository.add_event()`、`write_job_event()` 与 `write_step_event()`；`preprocess_all` 六步增加 `step_started/step_succeeded/step_failed` 事件与 duration/error metadata；新增 preprocess failure summary event；artifact metadata 默认写入 `adapter_mode/metric_source/metadata_contract_version` 与 adapter metadata keys；objective mock metrics 写 `metric_json.metric_source=mock` 且 `quality_gate_eligible=false`；audit trace 扩展 job artifact、run eval/release/policy、report eval/policy 与 release_gate subject。
+- `2026-06-13 08:31 UTC` — [代码审查，测试与文档回填] 新增/扩展 schema drift、SQLite pragma、runner event metadata、artifact metadata、objective mock separation、audit trace completeness tests；执行 `./venv/bin/python -m pytest tests/unit/storage/test_schema_drift.py tests/unit/storage/test_sqlite_connection.py tests/unit/jobs/test_runner.py tests/unit/storage/test_artifact_observability.py tests/unit/eval/test_objective.py tests/api/test_audit_trace.py -q`，结果 `13 passed, 1 warning`；执行 FT1+FT2 合并短途 suite，结果 `39 passed, 3 warnings`；执行 `python3 -m compileall -q src tests` 通过。
 |----------|------|------|------------|
 | `tests/unit/storage/test_migrations.py` | ♻️ 沿用 | 纳入 regression | 已存在 |
 | `tests/api/test_audit_trace.py` | 🔱 fork | 加 policy/release/eval links | 已存在 |

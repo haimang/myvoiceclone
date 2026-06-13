@@ -337,3 +337,10 @@ FT6 FastAPI E2E
 | live HTTP 已验证或有 skip reason | FT6-P3-03 | FT6-T07 | pass/skip reason 入 evidence |
 
 FT6 关闭时必须把 API contract fixture、live HTTP spike 结果和任何 skipped reason 交给 FT7 evidence pack。
+
+---
+
+## 11. 执行工作日志
+
+- `2026-06-13 08:47 UTC` — [代码制作] 完成 FT6-P1/P2/P3：新增 `src/myvoiceclone/api/routes_runs.py` 并注册 `/api/runs` surface；定义 first-test run/create/status/start request schemas；upload endpoint 使用 FastAPI `UploadFile` 并立即写入 `uploaded_audio` artifact；preprocess/infer/eval start endpoints 只创建 DB job，payload 引用 artifact/model/text/eval refs；status endpoint 聚合 jobs、job_events、artifacts、failure summary 与 links；补充 create-run contract fixture、TestClient coverage、live HTTP gated smoke，并把 `python-multipart` 纳入 `api`/`first-test` extras。
+- `2026-06-13 08:47 UTC` — [代码审查，测试与文档回填] 按 FastAPI 官方 `UploadFile`/BackgroundTasks/TestClient 文档复核本阶段接口边界：上传请求只作为 artifact 落库入口，长任务仍由 DB job ledger 承载；修复 Pydantic v2 `dict()` deprecation 为 v1/v2 兼容 dump helper；执行 `./venv/bin/python -m pytest tests/api/test_first_test_runs.py tests/api/test_app_factory.py tests/unit/test_architecture_boundaries.py tests/integration/test_first_test_http_smoke.py -q`，结果 `7 passed, 1 deselected, 1 warning`；执行 `./venv/bin/python -m pytest tests/integration/test_first_test_http_smoke.py -m live -q -rs`，结果 `1 skipped` 且 reason 为 `RUN_LIVE_HTTP=1 is required for live HTTP first-test smoke`；执行 `./venv/bin/python -m pytest -q`，结果 `127 passed, 1 skipped, 1 deselected, 14 warnings`；执行 `./venv/bin/python -m compileall -q src tests` 通过。

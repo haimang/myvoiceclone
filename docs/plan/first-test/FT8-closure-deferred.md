@@ -315,3 +315,10 @@ FT8 Closure Deferred
 | docs/check 可执行 | FT8-P3-02 | FT8-T01..T03 | PASS |
 
 FT8 关闭时必须给出 first-test 的真实 close type；若 FT7 只有 skipped evidence，本阶段只能产出 `implementation-complete-awaiting-live-verification` 或等价状态，不得标 full-close。
+
+---
+
+## 11. 执行工作日志
+
+- `2026-06-13 08:57 UTC` — [代码制作] 完成 FT8-P1/P2/P3：在 `docs/closure/first-build/deferred-items-ledger.md` 追加 first-test reconciliation snapshot，对 DEF-01..15 标注 retained/partial/pending-live 状态与后续触发器；新增 `docs/closure/first-test/deferred-items-ledger.md`，登记 FTD-01..10 并为每项写明类型、状态、触发器和目标阶段；新增 `docs/closure/first-test/first-test-closure.md`，给出 FT1-FT8 总 close type；新增 `docs/eval/first-test/final-input-pack.md`，索引 reference/test/schema/API/evidence/deferred 输入；新增 `tests/unit/test_first_test_closure_docs.py` 作为 docs-check。
+- `2026-06-13 08:57 UTC` — [代码审查，测试与文档回填] 按 FT7 skipped evidence 复核 closure 口径：总 close type 与 FT8 closure 均保持 `implementation-complete-awaiting-live-verification`，不标 full-close；执行 `./venv/bin/python -m pytest tests/unit/test_first_test_closure_docs.py -q`，结果 `5 passed`；FT8 docs/check 验证 closure/deferred/final input pack 路径存在、deferred trigger/目标阶段存在、final input pack 引用落到真实文件。

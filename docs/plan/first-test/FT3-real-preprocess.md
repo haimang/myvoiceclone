@@ -279,6 +279,13 @@ FT3 Real Preprocess
 | `tests/unit/adapters/*` | 🔱 fork | 增加 metadata/preflight 断言 | 已存在 |
 | `tests/unit/pipelines/test_export_dataset.py` | 🔱 fork | 加 lineage/non-empty 断言 | 已存在 |
 
+---
+
+## 9. 执行工作日志
+
+- `2026-06-13 08:34 UTC` — [代码制作] 完成 FT3-P1/P2/P3：FFmpeg/PyAnnote/Demucs/Whisper adapters 增加 `preflight()` 与 metadata contract；FFmpeg 增加 smoke metrics；ingest/diarize/clean/transcribe artifacts 写入 tool/model/device/cache/license/source separation caveat 等 metadata；clean/transcribe partial failure 写入 segment metadata；dataset manifest 增加 `segment_id/cleaned_artifact_id/uri/sha256/bytes/duration_sec/lineage`；新增 `pipelines/reference_select.py`，只选择可追溯 cleaned artifact + transcript + duration 合格 reference audio。
+- `2026-06-13 08:34 UTC` — [代码审查，测试与文档回填] 新增/扩展 adapter preflight、manifest lineage、reference selector tests；执行 `./venv/bin/python -m pytest tests/unit/adapters/test_ffmpeg_adapter.py tests/unit/adapters/test_pyannote_adapter.py tests/unit/adapters/test_demucs_adapter.py tests/unit/adapters/test_whisper_adapter.py tests/unit/pipelines/test_export_dataset.py tests/unit/pipelines/test_reference_select.py tests/unit/jobs/test_runner.py -q`，结果 `16 passed, 1 skipped, 1 warning`；执行 FT1-FT3 合并短途 suite，结果 `50 passed, 1 skipped, 3 warnings`；执行 `python3 -m compileall -q src tests` 通过。
+
 ### 8.3 分层与跑法
 
 | 类型 | 跑法 / 频率 | 主要层 | 触发时机 |

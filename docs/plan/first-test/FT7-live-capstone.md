@@ -329,3 +329,10 @@ FT7 Live Capstone
 | evidence validator 拒绝坏证据 | FT7-P2-02/P3-02 | FT7-T05 | validator PASS |
 
 FT7 关闭时必须把 run folder 路径、DB/artifact manifest、trace JSON、skip denominator 和 validator 结果交给 FT8 closure。
+
+---
+
+## 11. 执行工作日志
+
+- `2026-06-13 08:53 UTC` — [代码制作] 完成 FT7-P1/P2/P3：扩展 marker policy 测试，断言默认 addopts 不包含 live/gpu/slow；新增 `src/myvoiceclone/evidence.py`，实现 first-test evidence pack collector 与 validator，导出 `manifest.json/env.json/commands.json/db_summary.json/artifact_manifest.json/trace.json/skips.json/README.md`；新增 `scripts/collect_first_test_evidence.sh`，默认使用 `./venv/bin/python` 并输出到 `/mnt/usb/workspace/myvoiceresearch/test-runs/RUN_ID/`；新增 `tests/integration/test_first_test_capstone.py`，默认检查 FT1-FT6 closure gate，live capstone 缺显式 env 时写 skipped evidence 并 skip。
+- `2026-06-13 08:53 UTC` — [代码审查，测试与文档回填] 按 pytest 官方 skip/xfail 与 monkeypatch 文档复核 live skip reason、denominator 与 env isolation；validator 覆盖 skipped-without-reason、non-skipped empty manifest/no trace、mock artifact in real pack、repo large audio 等拒绝项；执行 `./venv/bin/python -m pytest tests/unit/test_pytest_markers.py tests/unit/test_first_test_evidence_validator.py tests/integration/test_first_test_capstone.py -q`，结果 `8 passed, 1 deselected`；执行 `./venv/bin/python -m pytest tests/integration/test_first_test_capstone.py -m live -q -rs`，结果 `1 skipped, 1 deselected`，skip reason 为 `RUN_FIRST_TEST_CAPSTONE=1 is required for live first-test capstone`；执行 `SKIP_REASON='RUN_FIRST_TEST_CAPSTONE=1 is required for live first-test capstone' RUN_ID='first-test-capstone-skipped-20260613T0850Z' ./scripts/collect_first_test_evidence.sh`，输出 `/mnt/usb/workspace/myvoiceresearch/test-runs/first-test-capstone-skipped-20260613T0850Z` 且 validator `ok=true`；执行 `./venv/bin/python -m pytest -q`，结果 `134 passed, 1 skipped, 2 deselected, 14 warnings`；执行 `./venv/bin/python -m compileall -q src tests` 通过。

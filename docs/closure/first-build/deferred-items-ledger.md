@@ -332,3 +332,32 @@ CLI eval、scoring 和部分 adapter 仍是 mock/硬编码实现；`download_mod
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | `v0.2` | `2026-06-13` | 追加第 2 轮 review deferred：DEF-09 至 DEF-15 |
+
+---
+
+## 6. first-test reconciliation snapshot（2026-06-13）
+
+> 来源：`docs/closure/first-test/first-test-closure.md`、`docs/closure/first-test/FT1-preflight-closure.md` 至 `FT7-live-capstone-closure.md`、`/mnt/usb/workspace/myvoiceresearch/test-runs/first-test-capstone-skipped-20260613T0850Z`。
+> 规则：只按 first-test 已验证 evidence 对账；FT7 live capstone 为 skipped evidence，因此真实 live 能力不得标 full closed。
+
+| ID | first-test 对账状态 | 证据 / 说明 | 后续触发器 |
+|----|---------------------|-------------|------------|
+| DEF-01 | retained | vec0 真实维度未进入 first-test 主路；FT2 只做 schema drift guard | 接入真实 ECAPA/CLAP/SBERT embedding |
+| DEF-02 | retained | first-test 未冻结 fake Protocol/ABC；仍由 `MOCK_ADAPTERS` 与 adapter metadata 分离保障 | adapter 接口冻结后 |
+| DEF-03 | retained | FT1/FT2 扩展 runner preprocess/job events；FT4/FT6 提供 real inference surface，但完整 14 job dispatch 未作为本阶段目标关闭 | pipeline step/job contract freeze |
+| DEF-04 | retained | FT2 增加 step events/failure summary；幂等重试保护仍未实现 | 状态机稳定并出现真实重试/resume UI |
+| DEF-05 | retained | FT4 选择 XTTS 真实推理 substrate wrapper；embedder adapter 仍未接真实模型 | GPU + embedding models configured |
+| DEF-06 | retained | FT5 新增 smoke/proxy/manual 分层并禁止 mock metric 当 quality pass；`pipelines/score.py` 真实 DNSMOS/pyannote scoring 仍 deferred | live objective scorer 接入 |
+| DEF-07 | retained | FT2 覆盖 WAL/busy_timeout 本地边界；多 writer 并发测试仍为 infra-hardening | 多 worker/JobRunner 引入 |
+| DEF-08 | partially closed / retained | FT5 已实现 subjective MOS/ABX API/service/report linkage；真实人工样本 evidence 仍待 FT7 live run | 真实合成输出 + reviewer evidence |
+| DEF-09 | retained | vec0 真实维度迁移未触发；first-test 未接真实 embedding | 接入真实 speaker/audio/text embedder |
+| DEF-10 | partially closed / retained | FT7 新增 live capstone/gated spike，且 skip reason 入 denominator；真实 live pass 仍 pending | `RUN_FIRST_TEST_CAPSTONE=1` live env 可用 |
+| DEF-11 | retained | FT2/FT6 用 jobs/job_events/run status 降级支撑；`pipeline_runs` 未作为生产 ledger | audit/resume UI 或多 worker workflow |
+| DEF-12 | retained | FT6 冻结 first-test API fields；全局 response envelope 仍 deferred | API/front-end contract freeze pass |
+| DEF-13 | retained | FT5 扩展 release policy semantics；policy storage/service 分层仍未下沉 | security-governance hardening |
+| DEF-14 | partially closed / retained | FT4 model manifest/provenance 与 FT5 eval layering 已完成；真实 objective metrics/model downloads 仍 live-gated | live training/eval 或发布级 metrics |
+| DEF-15 | retained | FT4/FT6 增加 `infer real`/run API surface；完整 CLI/API 对称化未冻结 | API/CLI contract freeze pass |
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| `v0.3` | `2026-06-13` | 追加 first-test reconciliation snapshot；明确 DEF-08/10/14 为 partial，其他保留触发器 |
