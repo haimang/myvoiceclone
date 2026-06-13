@@ -107,3 +107,38 @@ def check_release_policy(conn: sqlite3.Connection, model_run_id: str) -> Dict[st
         "reason": "All speakers have granted consent.",
         "unauthorized_speakers": []
     }
+
+
+def evaluate_release_layers(conn: sqlite3.Connection, model_run_id: str, policy_result: Dict[str, Any]) -> Dict[str, Any]:
+    cursor = conn.cursor()
+    cursor.execute("SELECT metric_json FROM eval_metrics WHERE run_id = ?;", (model_run_id,))
+    metric_jsons = []
+    for row in cursor.fetchall():
+        try:
+            metric_jsons.append(json.loads(row["metric_json"]) if row["metric_json"] else {})
+        except Exception:
+            metric_jsons.append({})
+
+    has_mock_metric = any(m.get("metric_source") == "mock" for m in metric_jsons)
+    has_quality_metric = any(m.get("quality_gate_eligible") and m.get("metric_source") != "mock" for m in metric_jsons)
+    smoke_fail = any(m.get("metric_source") == "smoke_metric" and m.get("smoke_pass") is False for m in metric_jsons)
+
+    smoke_pass = not smoke_fail
+    quality_pass = policy_result["passed"] and (not has_mock_metric or has_quality_metric)
+    blocked_reasons = []
+    if not smoke_pass:
+        blocked_reasons.append("smoke metrics failed")
+    if has_mock_metric and not has_quality_metric:
+        blocked_reasons.append("mock metrics are not eligible for real quality pass")
+    if not policy_result["passed"]:
+        blocked_reasons.append(policy_result["reason"])
+
+    return {
+        "smoke_pass": smoke_pass,
+        "quality_pass": quality_pass,
+        "manual_waived": False,
+        "blocked_reasons": blocked_reasons,
+        "reason": policy_result["reason"],
+        "policy_reason": policy_result["reason"],
+        "unauthorized_speakers": policy_result.get("unauthorized_speakers", []),
+    }

@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import json
 from typing import Dict, Any
 from myvoiceclone.domain.entities import Report
 from myvoiceclone.storage.repositories import ReportRepository, ModelRunRepository
@@ -11,7 +12,10 @@ def generate_subjective_report(
     report_id: str,
     run_id: str,
     abx_score: float,  # e.g. 0.88 preference rate
-    mos_score: float   # e.g. 4.2 out of 5.0
+    mos_score: float,  # e.g. 4.2 out of 5.0
+    reviewer: str = "local-reviewer",
+    comment: str = "",
+    sample_artifact_id: str = None,
 ) -> Report:
     report_repo = ReportRepository(conn)
     run_repo = ModelRunRepository(conn)
@@ -19,12 +23,21 @@ def generate_subjective_report(
     run = run_repo.get_by_id(run_id)
     if not run:
         raise ValueError(f"Model run {run_id} not found")
+    if not 1.0 <= mos_score <= 5.0:
+        raise ValueError("MOS score must be between 1.0 and 5.0")
+    if not 0.0 <= abx_score <= 1.0:
+        raise ValueError("ABX score must be between 0.0 and 1.0")
+    if not reviewer or not reviewer.strip():
+        raise ValueError("reviewer is required")
         
     initial_summary = {
         "status": "draft",
         "model_run_id": run_id,
+        "metric_source": "manual_mos",
         "abx_score": abx_score,
-        "mos_score": mos_score
+        "mos_score": mos_score,
+        "reviewer": reviewer,
+        "comment": comment,
     }
     
     draft_report = Report(
@@ -44,7 +57,7 @@ def generate_subjective_report(
     md_content += f"- **ABX Preference Rate**: {abx_score * 100:.1f}%\n\n"
     md_content += "## Sample Bundle Details\n"
     
-    rendered_art_id = run.config_json.get("rendered_artifact_id")
+    rendered_art_id = sample_artifact_id or run.config_json.get("rendered_artifact_id")
     if rendered_art_id:
         art = artifact_store.get_artifact(rendered_art_id)
         if art:
@@ -68,12 +81,38 @@ def generate_subjective_report(
     final_summary = {
         "status": "generated",
         "model_run_id": run_id,
+        "metric_source": "manual_mos",
+        "adapter_mode": run.config_json.get("adapter_mode", "unknown"),
         "abx_score": abx_score,
         "mos_score": mos_score,
+        "reviewer": reviewer,
+        "comment": comment,
         "rendered_artifact_id": rendered_art_id
     }
+    if rendered_art_id:
+        sample_id = f"manual_{report_id}"
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO eval_samples (
+                id, run_id, report_id, prompt, audio_artifact_id, output_artifact_id, scores_json
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+            """,
+            (
+                sample_id,
+                run_id,
+                report_id,
+                "manual MOS/ABX local review",
+                rendered_art_id,
+                rendered_art_id,
+                json.dumps(final_summary),
+            ),
+        )
     draft_report.summary_json = final_summary
     draft_report.artifact_id = report_art.id
+    draft_report.subject_type = "run"
+    draft_report.subject_id = run_id
+    draft_report.status = "completed"
     report_repo.save(draft_report)
     conn.commit()
     
