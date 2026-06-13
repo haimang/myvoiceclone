@@ -44,6 +44,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.train
+    runtime: nvidia
     volumes:
       - /mnt/usb/workspace/myvoiceresearch/db:/app/db
       - /mnt/usb/workspace/myvoiceresearch/data:/app/data

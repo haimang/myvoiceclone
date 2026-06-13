@@ -8,6 +8,8 @@
 -- Application code should migrate to new column names over time.
 -- A compatibility VIEW is provided for the artifacts table.
 
+PRAGMA foreign_keys = OFF;
+
 -- ─────────────────────────────────────────────
 -- 1. datasets: add status CHECK constraint
 -- ─────────────────────────────────────────────
@@ -231,3 +233,5 @@ CREATE INDEX IF NOT EXISTS idx_release_gates_status ON release_gates(model_run_i
 ALTER TABLE embedding_models ADD COLUMN namespace TEXT;
 ALTER TABLE embedding_models ADD COLUMN distance_metric TEXT DEFAULT 'cosine';
 ALTER TABLE embedding_models ADD COLUMN version TEXT;
+
+PRAGMA foreign_keys = ON;
