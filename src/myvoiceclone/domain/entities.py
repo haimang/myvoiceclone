@@ -107,3 +107,28 @@ class Report:
     summary_json: Dict[str, Any] = field(default_factory=dict)
     artifact_id: Optional[str] = None
     created_at: Optional[datetime] = None
+
+@dataclass
+class AudioProbe:
+    duration_sec: float
+    sample_rate: int
+    channels: int
+    format: str
+
+@dataclass
+class DiarizationTurn:
+    speaker_id: str
+    start_sec: float
+    end_sec: float
+
+@dataclass
+class TranscriptSegment:
+    start_sec: float
+    end_sec: float
+    text: str
+    confidence: float
+
+@dataclass
+class SeparationResult:
+    cleaned_path: str
+
