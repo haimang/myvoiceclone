@@ -5,9 +5,8 @@ from typing import List
 from myvoiceclone.api.dependencies import get_db
 from myvoiceclone.api.schemas import DatasetResponse, DatasetCreate
 from myvoiceclone.domain.entities import Dataset
+from myvoiceclone.domain.states import DatasetStatus
 from myvoiceclone.storage.repositories import DatasetRepository
-from myvoiceclone.storage.artifact_store import ArtifactStore
-from myvoiceclone.config import load_local_config
 # V5 fix: replaced direct pipeline import with domain service
 from myvoiceclone.services import service_export_dataset
 
@@ -33,7 +32,7 @@ def create_dataset(req: DatasetCreate, db: sqlite3.Connection = Depends(get_db))
     ds = Dataset(
         id=ds_id,
         name=req.name,
-        status="active",
+        status=DatasetStatus.ACTIVE.value,
         filter_json=req.filter_json
     )
     

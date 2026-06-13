@@ -5,6 +5,7 @@ from typing import List
 from myvoiceclone.api.dependencies import get_db
 from myvoiceclone.api.schemas import RecordingResponse, JobResponse
 from myvoiceclone.domain.entities import Job
+from myvoiceclone.domain.states import JobStatus
 from myvoiceclone.storage.repositories import RecordingRepository, JobRepository
 
 router = APIRouter(prefix="/recordings", tags=["recordings"])
@@ -29,7 +30,7 @@ def create_ingest_job(filepath: str, db: sqlite3.Connection = Depends(get_db)):
     job = Job(
         id=job_id,
         name="ingest",
-        status="pending",
+        status=JobStatus.PENDING.value,
         payload_json={"filepath": filepath}
     )
     job_repo.save(job)

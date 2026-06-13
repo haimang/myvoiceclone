@@ -54,16 +54,30 @@ class JobResponse(BaseModel):
     name: str
     status: str
     payload_json: Dict[str, Any]
+    type: Optional[str] = None
+    params_json: Dict[str, Any] = {}
+    subject_type: Optional[str] = None
+    subject_id: Optional[str] = None
+    pipeline: Optional[str] = None
+    requested_by: Optional[str] = None
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
     error_msg: Optional[str]
     created_at: Optional[datetime]
 
 class ModelRunResponse(BaseModel):
     id: str
     name: str
+    model_family: Optional[str] = None
     dataset_id: Optional[str]
     status: str
     config_json: Dict[str, Any]
+    checkpoint_artifact_id: Optional[str] = None
+    env_digest: Dict[str, Any] = {}
+    git_commit: Optional[str] = None
     created_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
 
 class InferenceRequest(BaseModel):
     speaker_id: str
@@ -74,6 +88,10 @@ class ReportResponse(BaseModel):
     id: str
     name: str
     report_type: str
+    kind: Optional[str] = None
+    subject_type: Optional[str] = None
+    subject_id: Optional[str] = None
+    status: Optional[str] = None
     summary_json: Dict[str, Any]
     artifact_id: Optional[str]
     created_at: Optional[datetime]
@@ -81,7 +99,9 @@ class ReportResponse(BaseModel):
 class ReleaseGateResponse(BaseModel):
     id: str
     model_run_id: str
-    passed: int
+    passed: bool
+    status: Optional[str] = None
     approved_by: Optional[str] = None
     approved_at: Optional[datetime] = None
     details_json: Dict[str, Any] = {}
+    decision_json: Dict[str, Any] = {}

@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 from myvoiceclone.api.dependencies import get_db
 from myvoiceclone.api.schemas import ModelRunResponse, JobResponse
 from myvoiceclone.domain.entities import Job
+from myvoiceclone.domain.states import JobStatus
 from myvoiceclone.storage.repositories import ModelRunRepository, JobRepository
 from pydantic import BaseModel
 
@@ -44,7 +45,7 @@ def create_training_job(req: TrainJobCreate, db: sqlite3.Connection = Depends(ge
     job = Job(
         id=job_id,
         name="train_sovits",
-        status="pending",
+        status=JobStatus.PENDING.value,
         payload_json={
             "dataset_id": req.dataset_id,
             "model_name": req.model_name,

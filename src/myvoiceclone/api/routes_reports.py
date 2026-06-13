@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any, Optional
 from myvoiceclone.api.dependencies import get_db
 from myvoiceclone.api.schemas import ReportResponse, ReleaseGateResponse
+from myvoiceclone.domain.states import ReleaseGateStatus
 from myvoiceclone.storage.repositories import ReportRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.config import load_local_config
@@ -46,6 +47,13 @@ def parse_gate_row(row) -> dict:
             d["details_json"] = {}
     else:
         d["details_json"] = {}
+    if d.get("decision_json"):
+        try:
+            d["decision_json"] = json.loads(d["decision_json"])
+        except Exception:
+            d["decision_json"] = {}
+    else:
+        d["decision_json"] = {}
     return d
 
 @router.get("/reports", response_model=List[ReportResponse])
@@ -95,6 +103,7 @@ def create_release_gate(req: ReleaseGateCreate, db: sqlite3.Connection = Depends
     from myvoiceclone.domain.policies import check_release_policy
     policy_res = check_release_policy(db, req.model_run_id)
     passed_int = 1 if policy_res["passed"] else 0
+    gate_status = ReleaseGateStatus.PASSED.value if policy_res["passed"] else ReleaseGateStatus.FAILED.value
     
     details_json = json.dumps({
         "reason": policy_res["reason"],
@@ -104,10 +113,10 @@ def create_release_gate(req: ReleaseGateCreate, db: sqlite3.Connection = Depends
     try:
         db.execute(
             """
-            INSERT INTO release_gates (id, model_run_id, passed, details_json)
-            VALUES (?, ?, ?, ?);
+            INSERT INTO release_gates (id, model_run_id, passed, status, details_json, decision_json)
+            VALUES (?, ?, ?, ?, ?, ?);
             """,
-            (req.gate_id, req.model_run_id, passed_int, details_json)
+            (req.gate_id, req.model_run_id, passed_int, gate_status, details_json, details_json)
         )
         db.commit()
     except sqlite3.IntegrityError as e:
@@ -140,15 +149,28 @@ def waive_release_gate(gate_id: str, req: ReleaseGateWaiveRequest, db: sqlite3.C
     db.execute(
         """
         UPDATE release_gates 
-        SET passed = 1, approved_by = ?, approved_at = CURRENT_TIMESTAMP, details_json = ? 
+        SET passed = 1, status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP, details_json = ?, decision_json = ?
         WHERE id = ?;
         """,
-        (req.approved_by, json.dumps(details), gate_id)
+        (ReleaseGateStatus.WAIVED.value, req.approved_by, json.dumps(details), json.dumps(details), gate_id)
     )
     
     db.execute(
-        "INSERT INTO policy_events (event_type, status, details_json) VALUES (?, ?, ?);",
-        ("release_gate_waived", "passed", json.dumps({"gate_id": gate_id, "approved_by": req.approved_by, "reason": req.reason}))
+        """
+        INSERT INTO policy_events (event_type, status, details_json, subject_type, subject_id, policy_name, decision, reason, payload_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """,
+        (
+            "release_gate_waived",
+            ReleaseGateStatus.WAIVED.value,
+            json.dumps({"gate_id": gate_id, "approved_by": req.approved_by, "reason": req.reason}),
+            "release_gate",
+            gate_id,
+            "release_gate",
+            ReleaseGateStatus.WAIVED.value,
+            req.reason,
+            json.dumps({"approved_by": req.approved_by}),
+        )
     )
     db.commit()
     
