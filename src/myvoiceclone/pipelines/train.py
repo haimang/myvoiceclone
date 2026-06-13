@@ -19,6 +19,7 @@ def run_train_rvc(
     config: Dict[str, Any],
     rvc_adapter: Optional[Any] = None,
     source_audio_path: Optional[str] = None,
+    model_run_id: Optional[str] = None,
     job_id: Optional[str] = None
 ) -> ModelRun:
     if rvc_adapter is None:
@@ -35,7 +36,7 @@ def run_train_rvc(
         raise ValueError(f"Dataset {dataset_id} must be frozen before training. Current status: {ds.status}")
 
     run_repo = ModelRunRepository(conn)
-    run_id = f"run_{uuid.uuid4().hex[:12]}"
+    run_id = model_run_id or f"run_{uuid.uuid4().hex[:12]}"
     
     run = ModelRun(
         id=run_id,

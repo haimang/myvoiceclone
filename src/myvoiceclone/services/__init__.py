@@ -215,6 +215,16 @@ def service_generate_subjective_report(
     )
 
 
+def service_run_evaluation(
+    conn: sqlite3.Connection,
+    run_id: str,
+) -> Any:
+    from myvoiceclone.pipelines.evaluate import run_evaluation
+
+    artifact_store = _make_artifact_store(conn)
+    return run_evaluation(conn, artifact_store, run_id)
+
+
 def service_evaluate_long_train_gate(
     conn: sqlite3.Connection,
     dataset_id: str,

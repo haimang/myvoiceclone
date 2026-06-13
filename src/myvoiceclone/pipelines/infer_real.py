@@ -8,6 +8,8 @@ from myvoiceclone.adapters.training.xtts_adapter import XttsAdapter
 from myvoiceclone.domain.entities import Artifact
 from myvoiceclone.storage.artifact_store import ArtifactStore
 
+SUPPORTED_XTTS_MODEL_IDS = {"tts_models/multilingual/multi-dataset/xtts_v2"}
+
 
 @dataclass
 class RealInferenceRequest:
@@ -27,6 +29,11 @@ def validate_inference_request(request: RealInferenceRequest) -> None:
         raise ValueError("Inference request missing required reference_artifact_id")
     if not request.model_id:
         raise ValueError("Inference request missing required model_id")
+    if request.model_id not in SUPPORTED_XTTS_MODEL_IDS:
+        raise ValueError(
+            f"Unsupported first-test real inference model_id '{request.model_id}'. "
+            f"Supported model ids: {sorted(SUPPORTED_XTTS_MODEL_IDS)}"
+        )
 
 
 def run_real_inference(

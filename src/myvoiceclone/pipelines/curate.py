@@ -1,6 +1,6 @@
 import uuid
 import sqlite3
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from myvoiceclone.domain.entities import Segment, Speaker
 from myvoiceclone.domain.states import SegmentStatus
 from myvoiceclone.storage.repositories import SegmentRepository
@@ -131,3 +131,80 @@ def run_deduplication(
                     break # Break out of loop since this segment is now dropped
                     
     return duplicate_ids
+
+
+def run_curation(
+    conn: sqlite3.Connection,
+    artifact_store: ArtifactStore,
+    recording_id: str,
+    *,
+    min_quality_score: float = 0.6,
+    dedupe: bool = False,
+    job_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    repo = SegmentRepository(conn)
+    segments = repo.list_by_recording(recording_id)
+    if not segments:
+        raise ValueError(f"No segments found for recording {recording_id}")
+
+    kept = []
+    needs_review = []
+    dropped = []
+    for seg in segments:
+        if seg.status == SegmentStatus.DROP.value:
+            dropped.append(seg.id)
+            continue
+        if seg.status not in (
+            SegmentStatus.PROCESSED.value,
+            SegmentStatus.CLEANED.value,
+            SegmentStatus.TRANSCRIBED.value,
+            SegmentStatus.NEEDS_REVIEW.value,
+            SegmentStatus.KEEP.value,
+        ):
+            continue
+
+        quality = seg.quality_score if seg.quality_score is not None else 0.0
+        if quality >= min_quality_score and seg.status != SegmentStatus.KEEP.value:
+            update_segment_status(
+                conn=conn,
+                segment_id=seg.id,
+                status=SegmentStatus.KEEP.value,
+                reason=f"first-test curation quality pass >= {min_quality_score}",
+                reviewer="curation",
+            )
+            kept.append(seg.id)
+        elif quality < min_quality_score and seg.status != SegmentStatus.NEEDS_REVIEW.value:
+            update_segment_status(
+                conn=conn,
+                segment_id=seg.id,
+                status=SegmentStatus.NEEDS_REVIEW.value,
+                reason=f"first-test curation quality below {min_quality_score}",
+                reviewer="curation",
+            )
+            needs_review.append(seg.id)
+        elif seg.status == SegmentStatus.KEEP.value:
+            kept.append(seg.id)
+        elif seg.status == SegmentStatus.NEEDS_REVIEW.value:
+            needs_review.append(seg.id)
+
+    duplicate_ids: List[str] = []
+    if dedupe:
+        from myvoiceclone.storage.vector_store import VectorStore
+
+        duplicate_ids = run_deduplication(
+            conn,
+            artifact_store,
+            AudioEmbedder(),
+            VectorStore(conn),
+            recording_id,
+        )
+
+    conn.commit()
+    return {
+        "recording_id": recording_id,
+        "job_id": job_id,
+        "kept_segment_ids": kept,
+        "needs_review_segment_ids": needs_review,
+        "dropped_segment_ids": dropped,
+        "duplicate_segment_ids": duplicate_ids,
+    }

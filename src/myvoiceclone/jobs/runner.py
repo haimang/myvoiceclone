@@ -98,6 +98,10 @@ class JobRunner:
                 self._execute_step_score(job)
             elif job.name == "curate":
                 self._execute_step_curate(job)
+            elif job.name == "infer_real":
+                self._execute_infer_real(job)
+            elif job.name == "eval_first_test":
+                self._execute_eval_first_test(job)
             else:
                 raise ValueError(f"Unsupported job type: {job.name}")
                 
@@ -349,4 +353,46 @@ class JobRunner:
         recording_id = payload.get("recording_id")
         if not recording_id:
             raise ValueError("Payload missing 'recording_id' key")
-        run_curation(self.conn, self.artifact_store, recording_id, job_id=job.id)
+        run_curation(
+            self.conn,
+            self.artifact_store,
+            recording_id,
+            min_quality_score=payload.get("min_quality_score", 0.6),
+            dedupe=payload.get("dedupe", False),
+            job_id=job.id,
+        )
+
+    def _execute_infer_real(self, job: Job):
+        """Dispatch a first-test real inference job."""
+        from myvoiceclone.pipelines.infer_real import RealInferenceRequest, run_real_inference
+
+        payload = job.payload_json
+        run_real_inference(
+            self.conn,
+            self.artifact_store,
+            RealInferenceRequest(
+                text=payload.get("text", ""),
+                reference_artifact_id=payload.get("reference_artifact_id", ""),
+                model_id=payload.get("model_id", "tts_models/multilingual/multi-dataset/xtts_v2"),
+                source_artifact_id=payload.get("source_artifact_id"),
+                language=payload.get("language", "en"),
+                adapter_mode=payload.get("adapter_mode", "real"),
+                config=payload.get("config", {}),
+            ),
+            job_id=job.id,
+        )
+
+    def _execute_eval_first_test(self, job: Job):
+        """Dispatch a first-test artifact evaluation job."""
+        from myvoiceclone.pipelines.evaluate import run_first_test_evaluation
+
+        payload = job.payload_json
+        run_first_test_evaluation(
+            self.conn,
+            self.artifact_store,
+            run_id=payload.get("run_id") or job.subject_id or job.id,
+            inference_artifact_id=payload.get("inference_artifact_id", ""),
+            reference_artifact_id=payload.get("reference_artifact_id"),
+            metric_source=payload.get("metric_source", "smoke_metric"),
+            job_id=job.id,
+        )

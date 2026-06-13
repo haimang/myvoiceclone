@@ -278,11 +278,10 @@ def evaluate(run_id: str, suite: str = typer.Option("default", help="Evaluation 
             typer.echo(f"Model run {run_id} not found")
             raise typer.Exit(code=1)
             
-        # Write eval metrics
-        conn.execute("INSERT INTO eval_metrics (run_id, metric_name, metric_value) VALUES (?, 'speaker_similarity', 0.85);")
-        conn.execute("INSERT INTO eval_metrics (run_id, metric_name, metric_value) VALUES (?, 'wer', 0.07);")
-        conn.commit()
-        typer.echo("Evaluation completed and metrics persisted in DB.")
+        from myvoiceclone.services import service_run_evaluation
+
+        result = service_run_evaluation(conn, run_id)
+        typer.echo(f"Evaluation completed with status: {result.get('status', 'unknown')}")
     finally:
         conn.close()
 
