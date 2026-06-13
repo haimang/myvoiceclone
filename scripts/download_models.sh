@@ -14,6 +14,6 @@ if [ $DRY_RUN -eq 1 ]; then
 fi
 
 echo "Downloading base models..."
-mkdir -p models/base
+mkdir -p models/pretrained
 # In a live environment, download via wget or curl
 echo "Downloaded models placeholders successfully."

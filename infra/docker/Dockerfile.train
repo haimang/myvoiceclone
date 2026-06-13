@@ -7,7 +7,9 @@ FROM nvcr.io/nvidia/pytorch:25.03-py3
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
     git \
+    libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -17,7 +19,7 @@ COPY pyproject.toml ./
 COPY src/ ./src/
 
 # Install application with required extras
-# V12 fix: must include [cli] for typer, [db] for sqlite-vec, [api] for fastapi
-RUN pip install --no-cache-dir ".[cli,db,api]"
+# V12 fix: must include [cli] for typer, [db] for sqlite-vec, [api] for fastapi, [audio] for real audio IO
+RUN pip install --no-cache-dir ".[cli,db,api,audio]"
 
 ENTRYPOINT ["python", "-m", "myvoiceclone.cli"]

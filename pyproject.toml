@@ -17,7 +17,7 @@ api = ["fastapi", "uvicorn", "pydantic"]
 cli = ["typer"]
 db = ["sqlite-vec"]
 audio = ["soundfile", "torchaudio"]
-preprocess = ["pyannote.audio", "openai-whisper"]
+preprocess = ["pyannote.audio", "openai-whisper", "demucs"]
 test = ["pytest", "httpx"]
 dev = ["ruff", "mypy"]
 
@@ -25,4 +25,4 @@ dev = ["ruff", "mypy"]
 where = ["src"]
 
 [project.scripts]
-myvoiceclone = "myvoiceclone.cli:main"
+myvoiceclone = "myvoiceclone.cli:app"
