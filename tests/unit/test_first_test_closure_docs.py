@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 
 import pytest
 
@@ -80,3 +81,19 @@ def test_first_test_overall_closure_matches_live_pending_evidence():
     assert "Close-type: `implementation-complete-awaiting-live-verification`" in text
     assert "不是 `full-close`" in text
     assert "pending-live" in text
+
+
+@pytest.mark.unit
+def test_first_test_closure_head_anchors_match_current_head():
+    head = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT, text=True).strip()
+    stale = []
+    for name in os.listdir(FIRST_TEST_CLOSURE_DIR):
+        if not name.endswith(".md"):
+            continue
+        path = os.path.join(FIRST_TEST_CLOSURE_DIR, name)
+        text = open(path, encoding="utf-8").read()
+        for match in re.findall(r"HEAD ([0-9a-f]{7,12})", text):
+            if match != head:
+                stale.append((name, match))
+
+    assert stale == []

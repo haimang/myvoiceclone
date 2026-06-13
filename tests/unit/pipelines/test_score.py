@@ -32,3 +32,11 @@ def test_score_pipeline_step(db_conn, artifact_store, synthetic_wav):
     scored_low = run_score(db_conn, rec.id, min_quality_score=0.5)
     assert len(scored_low) == 2
     assert all(s.status == "processed" for s in scored_low)
+
+
+@pytest.mark.unit
+def test_score_refuses_hidden_mock_metrics_in_real_mode(db_conn, monkeypatch):
+    monkeypatch.setenv("MOCK_ADAPTERS", "false")
+
+    with pytest.raises(RuntimeError, match="Real segment quality scoring is not configured"):
+        run_score(db_conn, "rec_missing")

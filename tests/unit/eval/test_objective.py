@@ -1,3 +1,4 @@
+import json
 import pytest
 from myvoiceclone.domain.entities import ModelRun
 from myvoiceclone.storage.repositories import ModelRunRepository
@@ -20,8 +21,30 @@ def test_evaluate_objective_metrics_success(db_conn, artifact_store):
     db_conn.execute(
         """
         INSERT INTO artifacts (id, name, uri, sha256, bytes, artifact_type)
-        VALUES ('art_rendered_sample', 'sample.wav', 'rendered_audio/sample.wav', 'sha_rendered', 10, 'rendered_audio');
+        VALUES ('art_reference_sample', 'ref.wav', 'cleaned/ref.wav', 'sha_ref', 10, 'cleaned'),
+               ('art_source_sample', 'source.wav', 'raw/source.wav', 'sha_source', 10, 'raw');
         """
+    )
+    db_conn.execute(
+        """
+        INSERT INTO artifacts (
+            id, name, uri, sha256, bytes, artifact_type,
+            parent_artifact_id, source_artifact_id, metadata_json
+        )
+        VALUES (?, 'sample.wav', 'rendered_audio/sample.wav', 'sha_rendered', 10, 'rendered_audio',
+                'art_reference_sample', 'art_source_sample', ?);
+        """,
+        (
+            "art_rendered_sample",
+            json.dumps(
+                {
+                    "input_refs": {
+                        "reference_artifact_id": "art_reference_sample",
+                        "source_artifact_id": "art_source_sample",
+                    }
+                }
+            ),
+        ),
     )
     db_conn.commit()
     
@@ -42,6 +65,17 @@ def test_evaluate_objective_metrics_success(db_conn, artifact_store):
     assert metrics["wer"] == 0.06
     assert all('"metric_source": "mock"' in row["metric_json"] for row in rows)
     assert all('"quality_gate_eligible": false' in row["metric_json"] for row in rows)
+    sample = db_conn.execute(
+        """
+        SELECT audio_artifact_id, input_artifact_id, output_artifact_id, reference_artifact_id
+        FROM eval_samples WHERE run_id = ?;
+        """,
+        (run_id,),
+    ).fetchone()
+    assert sample["audio_artifact_id"] == "art_rendered_sample"
+    assert sample["input_artifact_id"] == "art_source_sample"
+    assert sample["output_artifact_id"] == "art_rendered_sample"
+    assert sample["reference_artifact_id"] == "art_reference_sample"
 
 @pytest.mark.unit
 def test_evaluate_objective_metrics_degraded(db_conn, artifact_store):

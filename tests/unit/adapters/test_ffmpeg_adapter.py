@@ -1,5 +1,6 @@
 import os
 import shutil
+import wave
 import pytest
 from myvoiceclone.adapters.audio.ffmpeg import FFmpegAdapter, FFmpegAdapterError
 
@@ -37,6 +38,20 @@ def test_ffmpeg_normalize_mock(synthetic_wav, tmp_path, monkeypatch):
     
     adapter.normalize(synthetic_wav, out_path)
     assert os.path.exists(out_path)
+
+
+@pytest.mark.unit
+def test_ffmpeg_extract_segment_mock_writes_requested_duration(tmp_path, synthetic_wav, monkeypatch):
+    monkeypatch.setenv("MOCK_ADAPTERS", "true")
+    adapter = FFmpegAdapter()
+    out_path = str(tmp_path / "slice.wav")
+
+    adapter.extract_segment(synthetic_wav, out_path, 1.0, 3.5)
+
+    with wave.open(out_path, "rb") as wav:
+        assert wav.getnchannels() == 1
+        assert wav.getframerate() == 16000
+        assert wav.getnframes() == 40000
 
 @pytest.mark.unit
 def test_ffmpeg_live_probe(synthetic_wav, monkeypatch):

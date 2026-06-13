@@ -1,4 +1,5 @@
 import os
+import wave
 import pytest
 from myvoiceclone.adapters.separation.demucs_adapter import DemucsAdapter
 
@@ -9,6 +10,9 @@ def test_demucs_mock_separation(tmp_path):
     
     assert res.cleaned_path.endswith(".wav")
     assert os.path.exists(res.cleaned_path)
+    with wave.open(res.cleaned_path, "rb") as wav:
+        assert wav.getframerate() == 16000
+        assert wav.getnframes() > 0
 
 
 @pytest.mark.unit

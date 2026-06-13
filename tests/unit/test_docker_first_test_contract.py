@@ -35,6 +35,7 @@ def test_compose_mounts_configs_readonly_and_evidence_root():
 
     assert "../../configs:/app/configs:ro" in compose
     assert "/mnt/usb/workspace/myvoiceresearch/test-runs:/mnt/usb/workspace/myvoiceresearch/test-runs" in compose
+    assert "runtime: nvidia" in compose
 
 
 @pytest.mark.unit

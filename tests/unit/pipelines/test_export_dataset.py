@@ -103,6 +103,34 @@ def test_export_dataset_refuses_empty_manifest(db_conn, artifact_store):
     with pytest.raises(RuntimeError) as exc_info:
         run_export_dataset(db_conn, artifact_store, dataset_id="ds_empty", name="Empty DS")
 
-    assert "empty manifests are not valid first-test evidence" in str(exc_info.value)
+    assert "empty manifests" in str(exc_info.value)
     row = db_conn.execute("SELECT id FROM artifacts WHERE artifact_type = 'dataset';").fetchone()
     assert row is None
+
+
+@pytest.mark.unit
+def test_export_dataset_refuses_empty_transcripts(db_conn, artifact_store):
+    db_conn.execute(
+        """
+        INSERT INTO recordings (id, source_uri, sha256, duration_sec, sample_rate, channels, status)
+        VALUES ('rec_blank', 'uri', 'hash_blank', 10.0, 16000, 1, 'processed');
+        """
+    )
+    db_conn.execute(
+        """
+        INSERT INTO segments (id, recording_id, start_sec, end_sec, status, cleaned_artifact_id, transcript)
+        VALUES ('seg_blank', 'rec_blank', 0.0, 5.0, 'processed', 'art_blank', '   ');
+        """
+    )
+    db_conn.execute(
+        """
+        INSERT INTO artifacts (id, name, uri, sha256, bytes, artifact_type)
+        VALUES ('art_blank', 'blank.wav', 'blank.wav', 'sha_blank', 10, 'cleaned');
+        """
+    )
+    db_conn.commit()
+
+    with pytest.raises(RuntimeError) as exc_info:
+        run_export_dataset(db_conn, artifact_store, dataset_id="ds_blank", name="Blank DS")
+
+    assert "transcripts" in str(exc_info.value)

@@ -76,3 +76,21 @@ def test_real_inference_wrapper_writes_artifact_metadata(db_conn, artifact_store
     assert artifact.metadata_json["input_refs"]["reference_artifact_id"] == reference.id
     assert artifact.metadata_json["license"] == "Coqui Public Model License"
     assert artifact.metadata_json["duration_sec"] == 1.25
+
+
+@pytest.mark.unit
+def test_real_inference_rejects_non_reference_artifact_kind(db_conn, artifact_store):
+    uploaded = artifact_store.create_artifact(
+        name="upload.wav",
+        content=b"RIFFupload",
+        artifact_type="uploaded_audio",
+        metadata_json={"adapter_mode": "real"},
+    )
+
+    with pytest.raises(ValueError, match="unsupported kind"):
+        run_real_inference(
+            db_conn,
+            artifact_store,
+            RealInferenceRequest(text="hello", reference_artifact_id=uploaded.id),
+            adapter=FakeRealXttsAdapter(),
+        )

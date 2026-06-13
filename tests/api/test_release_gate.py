@@ -59,6 +59,12 @@ def test_create_release_gate_authorized(monkeypatch, api_client, db_conn):
     
     # Insert consent to authorize the speaker
     db_conn.execute("INSERT INTO consent_ledger (id, speaker_id, recording_id, granted) VALUES ('c_gate_1', 'gate_spk_1', 'gate_rec_1', 1);")
+    db_conn.execute(
+        """
+        INSERT INTO eval_metrics (run_id, metric_name, metric_value, metric_json)
+        VALUES ('gate_run_1', 'speaker_similarity', 0.9, '{"metric_source":"real_metric","quality_gate_eligible":true}');
+        """
+    )
     db_conn.commit()
     
     res = api_client.post(
@@ -70,6 +76,27 @@ def test_create_release_gate_authorized(monkeypatch, api_client, db_conn):
     assert data["id"] == "gate_auth"
     assert data["passed"] == 1
     assert "All speakers have granted consent" in data["details_json"]["reason"]
+
+
+@pytest.mark.api
+def test_release_gate_blocks_missing_quality_metrics(monkeypatch, api_client, db_conn):
+    monkeypatch.setattr(
+        "myvoiceclone.domain.policies.load_local_config",
+        lambda: {"security": {"enabled": False}}
+    )
+    db_conn.execute("INSERT INTO model_runs (id, name, status, config_json) VALUES ('gate_empty_metrics', 'Run', 'completed', '{}');")
+    db_conn.commit()
+
+    res = api_client.post(
+        "/api/reports/release-gates",
+        json={"gate_id": "gate_no_metrics", "model_run_id": "gate_empty_metrics"},
+    )
+
+    assert res.status_code == 200
+    data = res.json()
+    assert data["passed"] is False
+    assert data["details_json"]["quality_pass"] is False
+    assert "no evaluation metrics" in data["details_json"]["blocked_reasons"][0]
 
 @pytest.mark.api
 def test_waive_release_gate_validation_errors(monkeypatch, api_client, db_conn):

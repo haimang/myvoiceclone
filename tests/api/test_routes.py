@@ -108,8 +108,8 @@ def test_datasets_endpoints(api_client, db_conn, artifact_store):
     )
     db_conn.execute(
         """
-        INSERT INTO segments (id, recording_id, start_sec, end_sec, status, quality_score, cleaned_artifact_id)
-        VALUES ('seg_ds_1', 'rec_ds', 0.0, 5.0, 'keep', 0.8, 'art_clean_ds');
+        INSERT INTO segments (id, recording_id, start_sec, end_sec, status, quality_score, cleaned_artifact_id, transcript)
+        VALUES ('seg_ds_1', 'rec_ds', 0.0, 5.0, 'keep', 0.8, 'art_clean_ds', 'hello dataset');
         """
     )
     # Insert clean artifact

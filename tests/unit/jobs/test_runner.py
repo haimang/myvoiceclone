@@ -52,8 +52,10 @@ def test_job_runner_success_preprocess(db_conn, artifact_store, synthetic_wav):
     # Check that segments were created and scored
     seg_repo = SegmentRepository(db_conn)
     cursor = db_conn.cursor()
-    cursor.execute("SELECT id FROM recordings;")
-    rec_id = cursor.fetchone()[0]
+    cursor.execute("SELECT id, status FROM recordings;")
+    rec_row = cursor.fetchone()
+    rec_id = rec_row["id"]
+    assert rec_row["status"] == "scored"
     segments = seg_repo.list_by_recording(rec_id)
     assert len(segments) == 2
     assert all(s.status == "processed" for s in segments)
@@ -87,6 +89,8 @@ def test_job_runner_failure(db_conn, artifact_store):
     assert failed_steps
     assert failed_steps[0].metadata_json["step"] == "ingest"
     assert "Source file not found" in failed_steps[0].metadata_json["error"]
+    assert "traceback" in failed_steps[0].metadata_json
+    assert "traceback" in events[-1].metadata_json
 
 
 @pytest.mark.unit
@@ -113,6 +117,7 @@ def test_job_runner_curate_step_marks_processed_segments_keep(db_conn, artifact_
     assert row["status"] == "keep"
     events = JobRepository(db_conn).get_events(job.id)
     assert events[-1].status_to == "completed"
+    assert any(e.event_type == "step_succeeded" and e.metadata_json["step"] == "curate" for e in events)
 
 
 @pytest.mark.unit
@@ -136,6 +141,8 @@ def test_job_runner_dispatches_infer_real(db_conn, artifact_store, monkeypatch):
     assert row is not None
     assert row["artifact_type"] == "rendered_audio"
     assert row["job_id"] == job.id
+    events = JobRepository(db_conn).get_events(job.id)
+    assert any(e.event_type == "step_succeeded" and e.metadata_json["step"] == "infer_real" for e in events)
 
 
 @pytest.mark.unit
@@ -161,3 +168,4 @@ def test_job_runner_dispatches_eval_first_test(db_conn, artifact_store, syntheti
     assert report["report_type"] == "first_test_eval"
     events = JobRepository(db_conn).get_events(job.id)
     assert events[-1].status_to == "completed"
+    assert any(e.event_type == "step_succeeded" and e.metadata_json["step"] == "eval_first_test" for e in events)

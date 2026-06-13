@@ -29,8 +29,41 @@ def test_evidence_exporter_writes_required_files(tmp_path, monkeypatch):
         "README.md",
     }
     assert expected <= {path.name for path in pack.iterdir()}
+    env = json.loads((pack / "env.json").read_text(encoding="utf-8"))
+    assert env["resolved"]["DB_PATH"] == str(tmp_path / "missing.db")
+    assert env["resolved"]["ARTIFACT_ROOT"] == str(tmp_path / "artifacts")
     result = validate_evidence_pack(str(pack), repo_root=str(tmp_path))
     assert result.ok, result.errors
+
+
+@pytest.mark.unit
+def test_evidence_exporter_collects_reports_table(tmp_path):
+    db_path = tmp_path / "db.sqlite"
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        CREATE TABLE reports (
+            id TEXT, name TEXT, report_type TEXT, summary_json TEXT,
+            artifact_id TEXT, created_at TEXT
+        );
+        """
+    )
+    conn.execute(
+        "INSERT INTO reports VALUES ('r1', 'Report', 'first_test_eval', '{\"ok\":true}', NULL, '2026-06-13T00:00:00Z');"
+    )
+    conn.commit()
+    conn.close()
+
+    pack = collect_evidence_pack(
+        run_id="reports",
+        output_root=str(tmp_path / "runs"),
+        db_path=str(db_path),
+        artifact_root=str(tmp_path / "artifacts"),
+        skip_reason="report table smoke",
+    )
+
+    trace = json.loads((pack / "trace.json").read_text(encoding="utf-8"))
+    assert trace["reports"][0]["id"] == "r1"
 
 
 @pytest.mark.unit
