@@ -18,7 +18,7 @@
 > - `final-execution-plan.md:132`、`:240`、`:373`、`:481`
 > 关联 reference-anchor:
 > - 见 §7 内置锚区
-> 文档状态: `draft`
+> 文档状态: `frozen`
 
 ---
 
