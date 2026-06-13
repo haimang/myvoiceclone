@@ -50,7 +50,9 @@ def run_export_dataset(
         SELECT id, recording_id, speaker_id, start_sec, end_sec, cleaned_artifact_id, transcript, quality_score
         FROM segments
         WHERE status IN (?, ?, ?, ?, ?)
-          AND cleaned_artifact_id IS NOT NULL;
+          AND cleaned_artifact_id IS NOT NULL
+          AND transcript IS NOT NULL
+          AND TRIM(transcript) != '';
         """
         ,
         (
@@ -64,8 +66,8 @@ def run_export_dataset(
     rows = cursor.fetchall()
     if not rows:
         raise RuntimeError(
-            "Dataset freeze refused: no eligible segments with cleaned artifacts. "
-            "Run preprocess/curation first; empty manifests are not valid first-test evidence."
+            "Dataset freeze refused: no eligible segments with cleaned artifacts and transcripts. "
+            "Run preprocess/curation first; empty manifests or empty transcripts are not valid first-test evidence."
         )
     
     # Group segment IDs by recording_id to prevent leak
@@ -125,7 +127,7 @@ def run_export_dataset(
                 "cleaned_artifact_id": clean_art.id,
                 "sha256": clean_art.sha256,
                 "bytes": clean_art.bytes,
-                "transcript": s["transcript"] or "",
+                "transcript": s["transcript"],
                 "split": split,
                 "speaker_id": s["speaker_id"],
                 "duration": s["end_sec"] - s["start_sec"],

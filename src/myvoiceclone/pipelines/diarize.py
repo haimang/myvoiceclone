@@ -3,7 +3,8 @@ import uuid
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Speaker
-from myvoiceclone.domain.states import SegmentStatus
+from myvoiceclone.domain.states import RecordingStatus, SegmentStatus
+from myvoiceclone.pipelines.status import mark_recording_status
 from myvoiceclone.storage.repositories import RecordingRepository, SegmentRepository, SpeakerRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.diarization.pyannote_adapter import PyannoteAdapter
@@ -87,5 +88,6 @@ def run_diarize(
         segments.append(seg)
         
     # Commit changes
+    mark_recording_status(conn, recording_id, RecordingStatus.DIARIZED.value)
     conn.commit()
     return segments

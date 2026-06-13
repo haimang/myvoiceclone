@@ -1,6 +1,7 @@
 import sqlite3
 import logging
 import time
+import traceback
 from typing import Dict, Any, Optional
 from myvoiceclone.domain.entities import Job
 from myvoiceclone.domain.states import JobStatus
@@ -25,6 +26,14 @@ from myvoiceclone.adapters.asr.whisper_adapter import WhisperAdapter
 from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
 
 logger = logging.getLogger("myvoiceclone.jobs.runner")
+
+
+def _exception_metadata(exc: Exception) -> Dict[str, Any]:
+    return {
+        "error": str(exc),
+        "error_type": exc.__class__.__name__,
+        "traceback": traceback.format_exc(),
+    }
 
 class JobRunner:
     def __init__(
@@ -127,10 +136,12 @@ class JobRunner:
             self.conn.commit()
             raise ke
         except Exception as e:
-            logger.error(f"Job {job_id} failed: {e}")
+            logger.exception("Job %s failed", job_id)
             job.status = JobStatus.FAILED.value
             job.error_msg = str(e)
             self.repo.save(job)
+            err_meta = _exception_metadata(e)
+            err_meta["job_name"] = job.name
             write_job_event(
                 self.conn,
                 job_id,
@@ -138,7 +149,7 @@ class JobRunner:
                 JobStatus.RUNNING.value,
                 JobStatus.FAILED.value,
                 f"Job failed: {e}",
-                metadata_json={"job_name": job.name, "error": str(e)},
+                metadata_json=err_meta,
             )
             self.conn.commit()
             raise e
@@ -148,7 +159,11 @@ class JobRunner:
         filepath = payload.get("filepath")
         if not filepath:
             raise ValueError("Payload missing 'filepath' key")
-        run_ingest(self.conn, self.artifact_store, self.ffmpeg_adapter, filepath, job_id=job.id)
+        self._run_observed_step(
+            job.id,
+            "ingest",
+            lambda: {"recording_id": run_ingest(self.conn, self.artifact_store, self.ffmpeg_adapter, filepath, job_id=job.id).id},
+        )
 
     def _execute_preprocess_all(self, job: Job):
         payload = job.payload_json
@@ -218,6 +233,7 @@ class JobRunner:
             result = fn()
         except Exception as exc:
             duration_ms = int((time.monotonic() - started) * 1000)
+            err_meta = _exception_metadata(exc)
             write_step_event(
                 self.conn,
                 job_id,
@@ -225,6 +241,10 @@ class JobRunner:
                 "failed",
                 duration_ms=duration_ms,
                 error=str(exc),
+                metadata_json={
+                    "error_type": err_meta["error_type"],
+                    "traceback": err_meta["traceback"],
+                },
             )
             self.conn.commit()
             raise
@@ -280,16 +300,22 @@ class JobRunner:
         if not dataset_id or not model_name:
             raise ValueError("Payload missing 'dataset_id' or 'model_name'")
             
-        run_train_sovits(
-            conn=self.conn,
-            artifact_store=self.artifact_store,
-            sovits_adapter=self.sovits_adapter,
-            dataset_id=dataset_id,
-            model_name=model_name,
-            config=config,
-            model_run_id=model_run_id,
-            resume_from_checkpoint_id=resume_from,
-            job_id=job.id
+        self._run_observed_step(
+            job.id,
+            "train_sovits",
+            lambda: {
+                "model_run_id": run_train_sovits(
+                    conn=self.conn,
+                    artifact_store=self.artifact_store,
+                    sovits_adapter=self.sovits_adapter,
+                    dataset_id=dataset_id,
+                    model_name=model_name,
+                    config=config,
+                    model_run_id=model_run_id,
+                    resume_from_checkpoint_id=resume_from,
+                    job_id=job.id,
+                ).id
+            },
         )
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -304,7 +330,11 @@ class JobRunner:
         recording_id = payload.get("recording_id")
         if not recording_id:
             raise ValueError("Payload missing 'recording_id' key")
-        run_diarize(self.conn, self.artifact_store, self.pyannote_adapter, recording_id, job_id=job.id)
+        self._run_observed_step(
+            job.id,
+            "diarize",
+            lambda: {"segment_count": len(run_diarize(self.conn, self.artifact_store, self.pyannote_adapter, recording_id, job_id=job.id))},
+        )
 
     def _execute_step_slice(self, job: Job):
         """Dispatch a 'slice' job for a single recording."""
@@ -315,8 +345,23 @@ class JobRunner:
             raise ValueError("Payload missing 'recording_id' key")
         min_dur = payload.get("min_duration", 2.0)
         max_dur = payload.get("max_duration", 10.0)
-        run_slice(self.conn, self.artifact_store, self.ffmpeg_adapter, recording_id,
-                  min_duration=min_dur, max_duration=max_dur, job_id=job.id)
+        self._run_observed_step(
+            job.id,
+            "slice",
+            lambda: {
+                "segment_count": len(
+                    run_slice(
+                        self.conn,
+                        self.artifact_store,
+                        self.ffmpeg_adapter,
+                        recording_id,
+                        min_duration=min_dur,
+                        max_duration=max_dur,
+                        job_id=job.id,
+                    )
+                )
+            },
+        )
 
     def _execute_step_clean(self, job: Job):
         """Dispatch a 'clean' job for a single recording."""
@@ -325,7 +370,11 @@ class JobRunner:
         recording_id = payload.get("recording_id")
         if not recording_id:
             raise ValueError("Payload missing 'recording_id' key")
-        run_clean(self.conn, self.artifact_store, self.demucs_adapter, recording_id, job_id=job.id)
+        self._run_observed_step(
+            job.id,
+            "clean",
+            lambda: {"segment_count": len(run_clean(self.conn, self.artifact_store, self.demucs_adapter, recording_id, job_id=job.id))},
+        )
 
     def _execute_step_transcribe(self, job: Job):
         """Dispatch a 'transcribe' job for a single recording."""
@@ -334,7 +383,11 @@ class JobRunner:
         recording_id = payload.get("recording_id")
         if not recording_id:
             raise ValueError("Payload missing 'recording_id' key")
-        run_transcribe(self.conn, self.artifact_store, self.whisper_adapter, recording_id, job_id=job.id)
+        self._run_observed_step(
+            job.id,
+            "transcribe",
+            lambda: {"segment_count": len(run_transcribe(self.conn, self.artifact_store, self.whisper_adapter, recording_id, job_id=job.id))},
+        )
 
     def _execute_step_score(self, job: Job):
         """Dispatch a 'score' job for a single recording."""
@@ -344,7 +397,11 @@ class JobRunner:
         if not recording_id:
             raise ValueError("Payload missing 'recording_id' key")
         min_quality = payload.get("min_quality_score", 0.6)
-        run_score(self.conn, recording_id, min_quality_score=min_quality)
+        self._run_observed_step(
+            job.id,
+            "score",
+            lambda: {"segment_count": len(run_score(self.conn, recording_id, min_quality_score=min_quality))},
+        )
 
     def _execute_step_curate(self, job: Job):
         """Dispatch a 'curate' job for a single recording."""
@@ -353,13 +410,17 @@ class JobRunner:
         recording_id = payload.get("recording_id")
         if not recording_id:
             raise ValueError("Payload missing 'recording_id' key")
-        run_curation(
-            self.conn,
-            self.artifact_store,
-            recording_id,
-            min_quality_score=payload.get("min_quality_score", 0.6),
-            dedupe=payload.get("dedupe", False),
-            job_id=job.id,
+        self._run_observed_step(
+            job.id,
+            "curate",
+            lambda: run_curation(
+                self.conn,
+                self.artifact_store,
+                recording_id,
+                min_quality_score=payload.get("min_quality_score", 0.6),
+                dedupe=payload.get("dedupe", False),
+                job_id=job.id,
+            ),
         )
 
     def _execute_infer_real(self, job: Job):
@@ -367,19 +428,25 @@ class JobRunner:
         from myvoiceclone.pipelines.infer_real import RealInferenceRequest, run_real_inference
 
         payload = job.payload_json
-        run_real_inference(
-            self.conn,
-            self.artifact_store,
-            RealInferenceRequest(
-                text=payload.get("text", ""),
-                reference_artifact_id=payload.get("reference_artifact_id", ""),
-                model_id=payload.get("model_id", "tts_models/multilingual/multi-dataset/xtts_v2"),
-                source_artifact_id=payload.get("source_artifact_id"),
-                language=payload.get("language", "en"),
-                adapter_mode=payload.get("adapter_mode", "real"),
-                config=payload.get("config", {}),
-            ),
-            job_id=job.id,
+        self._run_observed_step(
+            job.id,
+            "infer_real",
+            lambda: {
+                "artifact_id": run_real_inference(
+                    self.conn,
+                    self.artifact_store,
+                    RealInferenceRequest(
+                        text=payload.get("text", ""),
+                        reference_artifact_id=payload.get("reference_artifact_id", ""),
+                        model_id=payload.get("model_id", "tts_models/multilingual/multi-dataset/xtts_v2"),
+                        source_artifact_id=payload.get("source_artifact_id"),
+                        language=payload.get("language", "en"),
+                        adapter_mode=payload.get("adapter_mode", "real"),
+                        config=payload.get("config", {}),
+                    ),
+                    job_id=job.id,
+                ).id
+            },
         )
 
     def _execute_eval_first_test(self, job: Job):
@@ -387,12 +454,16 @@ class JobRunner:
         from myvoiceclone.pipelines.evaluate import run_first_test_evaluation
 
         payload = job.payload_json
-        run_first_test_evaluation(
-            self.conn,
-            self.artifact_store,
-            run_id=payload.get("run_id") or job.subject_id or job.id,
-            inference_artifact_id=payload.get("inference_artifact_id", ""),
-            reference_artifact_id=payload.get("reference_artifact_id"),
-            metric_source=payload.get("metric_source", "smoke_metric"),
-            job_id=job.id,
+        self._run_observed_step(
+            job.id,
+            "eval_first_test",
+            lambda: run_first_test_evaluation(
+                self.conn,
+                self.artifact_store,
+                run_id=payload.get("run_id") or job.subject_id or job.id,
+                inference_artifact_id=payload.get("inference_artifact_id", ""),
+                reference_artifact_id=payload.get("reference_artifact_id"),
+                metric_source=payload.get("metric_source", "smoke_metric"),
+                job_id=job.id,
+            ),
         )

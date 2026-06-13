@@ -9,6 +9,7 @@ from myvoiceclone.domain.entities import Artifact
 from myvoiceclone.storage.artifact_store import ArtifactStore
 
 SUPPORTED_XTTS_MODEL_IDS = {"tts_models/multilingual/multi-dataset/xtts_v2"}
+REFERENCE_ARTIFACT_TYPES = {"cleaned", "reference_audio"}
 
 
 @dataclass
@@ -48,6 +49,12 @@ def run_real_inference(
     reference_artifact = artifact_store.get_artifact(request.reference_artifact_id)
     if not reference_artifact:
         raise ValueError(f"Reference artifact {request.reference_artifact_id} not found")
+    artifact_kind = reference_artifact.kind or reference_artifact.artifact_type
+    if artifact_kind not in REFERENCE_ARTIFACT_TYPES:
+        raise ValueError(
+            f"Reference artifact {request.reference_artifact_id} has unsupported kind '{artifact_kind}'. "
+            f"Expected one of: {sorted(REFERENCE_ARTIFACT_TYPES)}"
+        )
 
     adapter = adapter or XttsAdapter(model_id=request.model_id)
     tmp_dir = os.path.join(artifact_store.root_dir, "_tmp_inference")

@@ -2,7 +2,8 @@ import json
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Artifact
-from myvoiceclone.domain.states import SegmentStatus
+from myvoiceclone.domain.states import RecordingStatus, SegmentStatus
+from myvoiceclone.pipelines.status import mark_recording_status
 from myvoiceclone.storage.repositories import SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.asr.whisper_adapter import WhisperAdapter
@@ -73,5 +74,6 @@ def run_transcribe(
             seg.metadata_json["transcribe_error"] = str(e)
             seg_repo.save(seg)
             
+    mark_recording_status(conn, recording_id, RecordingStatus.TRANSCRIBED.value)
     conn.commit()
     return transcribed_segments

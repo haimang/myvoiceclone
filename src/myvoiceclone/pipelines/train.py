@@ -10,6 +10,7 @@ from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.training.rvc_adapter import RvcAdapter
 from myvoiceclone.adapters.training.xtts_adapter import XttsAdapter
 from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
+from myvoiceclone.config import resolve_mock_adapters
 
 def run_train_rvc(
     conn: sqlite3.Connection,
@@ -72,8 +73,15 @@ def run_train_rvc(
         )
 
         # 2. Convert sample (Voice Conversion)
-        # Use dummy source path if not provided
-        src_path = source_audio_path or "fake_source_audio.wav"
+        if source_audio_path:
+            src_path = source_audio_path
+        elif resolve_mock_adapters():
+            src_path = os.path.join(artifact_store.root_dir, "_mock_source_audio.wav")
+            if not os.path.exists(src_path):
+                with open(src_path, "wb") as handle:
+                    handle.write(b"RIFFmock-rvc-source")
+        else:
+            raise ValueError("source_audio_path is required for real RVC conversion")
         convert_req = ConvertRequest(
             model_run_id=run_id,
             source_audio_path=src_path,

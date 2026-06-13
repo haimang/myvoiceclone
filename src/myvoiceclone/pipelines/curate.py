@@ -2,7 +2,8 @@ import uuid
 import sqlite3
 from typing import List, Optional, Dict, Any
 from myvoiceclone.domain.entities import Segment, Speaker
-from myvoiceclone.domain.states import SegmentStatus
+from myvoiceclone.domain.states import RecordingStatus, SegmentStatus
+from myvoiceclone.pipelines.status import mark_recording_status
 from myvoiceclone.storage.repositories import SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.storage.vector_store import VectorStore
@@ -189,16 +190,17 @@ def run_curation(
 
     duplicate_ids: List[str] = []
     if dedupe:
-        from myvoiceclone.storage.vector_store import VectorStore
+        from myvoiceclone.storage.vec0_store import Vec0Store
 
         duplicate_ids = run_deduplication(
             conn,
             artifact_store,
             AudioEmbedder(),
-            VectorStore(conn),
+            Vec0Store(conn),
             recording_id,
         )
 
+    mark_recording_status(conn, recording_id, RecordingStatus.CURATED.value)
     conn.commit()
     return {
         "recording_id": recording_id,

@@ -2,7 +2,8 @@ import os
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Artifact
-from myvoiceclone.domain.states import SegmentStatus
+from myvoiceclone.domain.states import RecordingStatus, SegmentStatus
+from myvoiceclone.pipelines.status import mark_recording_status
 from myvoiceclone.storage.repositories import SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.separation.demucs_adapter import DemucsAdapter
@@ -70,5 +71,6 @@ def run_clean(
             seg.metadata_json["clean_error"] = str(e)
             seg_repo.save(seg)
             
+    mark_recording_status(conn, recording_id, RecordingStatus.CLEANED.value)
     conn.commit()
     return cleaned_segments

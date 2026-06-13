@@ -1,7 +1,9 @@
 import sqlite3
 from typing import List
+from myvoiceclone.config import resolve_mock_adapters
 from myvoiceclone.domain.entities import Segment
-from myvoiceclone.domain.states import SegmentStatus
+from myvoiceclone.domain.states import RecordingStatus, SegmentStatus
+from myvoiceclone.pipelines.status import mark_recording_status
 from myvoiceclone.storage.repositories import SegmentRepository
 
 def calculate_duration_score(duration: float) -> float:
@@ -23,6 +25,12 @@ def run_score(
     recording_id: str,
     min_quality_score: float = 0.6
 ) -> List[Segment]:
+    if not resolve_mock_adapters():
+        raise RuntimeError(
+            "Real segment quality scoring is not configured. "
+            "Set MOCK_ADAPTERS=true for first-test mock scoring or wire a real scorer."
+        )
+
     seg_repo = SegmentRepository(conn)
     segments = seg_repo.list_by_recording(recording_id)
     
@@ -57,5 +65,6 @@ def run_score(
         seg_repo.save(seg)
         scored_segments.append(seg)
         
+    mark_recording_status(conn, recording_id, RecordingStatus.SCORED.value)
     conn.commit()
     return scored_segments

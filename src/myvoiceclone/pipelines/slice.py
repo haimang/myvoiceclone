@@ -2,7 +2,8 @@ import os
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Artifact
-from myvoiceclone.domain.states import SegmentStatus
+from myvoiceclone.domain.states import RecordingStatus, SegmentStatus
+from myvoiceclone.pipelines.status import mark_recording_status
 from myvoiceclone.storage.repositories import RecordingRepository, SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.audio.ffmpeg import FFmpegAdapter
@@ -62,7 +63,8 @@ def run_slice(
                 "segment_id": seg.id,
                 "start_sec": seg.start_sec,
                 "end_sec": seg.end_sec,
-                "duration_sec": duration
+                "duration_sec": duration,
+                **ffmpeg_adapter.metadata(),
             }
         )
         
@@ -71,5 +73,6 @@ def run_slice(
         seg_repo.save(seg)
         processed_segments.append(seg)
         
+    mark_recording_status(conn, recording_id, RecordingStatus.SLICED.value)
     conn.commit()
     return processed_segments
