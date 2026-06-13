@@ -29,4 +29,4 @@ class RvcAdapter:
                 duration_sec=3.5
             )
 
-        raise NotImplementedError("Real RVC conversion is not implemented in first-build. Use MOCK_ADAPTERS=true.")
+        raise RuntimeError("Real RVC conversion is not implemented; no mock fallback is allowed when MOCK_ADAPTERS=false.")

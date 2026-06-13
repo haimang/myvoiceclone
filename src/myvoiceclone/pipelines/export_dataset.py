@@ -62,6 +62,11 @@ def run_export_dataset(
         ),
     )
     rows = cursor.fetchall()
+    if not rows:
+        raise RuntimeError(
+            "Dataset freeze refused: no eligible segments with cleaned artifacts. "
+            "Run preprocess/curation first; empty manifests are not valid first-test evidence."
+        )
     
     # Group segment IDs by recording_id to prevent leak
     recording_groups = {}
@@ -110,14 +115,29 @@ def run_export_dataset(
             ds_repo.add_segment(dataset_id, s["id"], split)
             
             clean_art = artifact_store.get_artifact(s["cleaned_artifact_id"])
+            if not clean_art:
+                raise RuntimeError(f"Cleaned artifact {s['cleaned_artifact_id']} for segment {s['id']} not found")
             manifest_rows.append({
                 "id": s["id"],
+                "segment_id": s["id"],
                 "audio_path": clean_art.uri,
+                "uri": clean_art.uri,
+                "cleaned_artifact_id": clean_art.id,
+                "sha256": clean_art.sha256,
+                "bytes": clean_art.bytes,
                 "transcript": s["transcript"] or "",
                 "split": split,
                 "speaker_id": s["speaker_id"],
-                "duration": s["end_sec"] - s["start_sec"]
+                "duration": s["end_sec"] - s["start_sec"],
+                "duration_sec": s["end_sec"] - s["start_sec"],
+                "lineage": {
+                    "cleaned_artifact_id": clean_art.id,
+                    "source_artifact_id": clean_art.source_artifact_id or clean_art.parent_artifact_id,
+                },
             })
+
+    if not manifest_rows:
+        raise RuntimeError("Dataset freeze refused: manifest would be empty")
             
     # Perform split leak detection before freezing
     if detect_split_leak(conn, dataset_id):
