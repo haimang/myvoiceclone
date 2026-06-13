@@ -344,14 +344,14 @@ P2 Preprocess
 
 | 收口目标 | 工作项 | Test-ID | PASS 证据（四元组）| 状态 |
 |----------|--------|---------|---------------------|------|
-| ingest 去重 | P2-01 | P2-T01 | commit {sha} + pytest tests/unit/pipelines/test_ingest.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| DTO 隔离 + FFmpeg 命令可测 | P2-02 | P2-T02 | commit {sha} + pytest tests/unit/adapters/test_dto_contracts.py tests/unit/adapters/test_ffmpeg_adapter.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| turns -> segments | P2-03 | P2-T03 | commit {sha} + pytest tests/unit/adapters/test_pyannote_adapter.py tests/unit/pipelines/test_diarize.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| slicing bounds | P2-04 | P2-T04 | commit {sha} + pytest tests/unit/pipelines/test_slice.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| clean lineage | P2-05 | P2-T05 | commit {sha} + pytest tests/unit/adapters/test_demucs_adapter.py tests/unit/pipelines/test_clean.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| transcript 入库 | P2-06 | P2-T06 | commit {sha} + pytest tests/unit/adapters/test_whisper_adapter.py tests/unit/pipelines/test_transcribe.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| score idempotent | P2-07 | P2-T07 | commit {sha} + pytest tests/unit/pipelines/test_score.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| job trace | P2-08 | P2-T08 | commit {sha} + pytest tests/unit/jobs/test_runner.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
+| ingest 去重 | P2-01 | P2-T01 | commit d8066f1 + pytest tests/unit/pipelines/test_ingest.py PASS + 2026-06-13 11:10 UTC | ✅ verified |
+| DTO 隔离 + FFmpeg 命令可测 | P2-02 | P2-T02 | commit d8066f1 + pytest tests/unit/adapters/test_dto_contracts.py tests/unit/adapters/test_ffmpeg_adapter.py PASS + 2026-06-13 11:10 UTC | ✅ verified |
+| turns -> segments | P2-03 | P2-T03 | commit d8066f1 + pytest tests/unit/adapters/test_pyannote_adapter.py tests/unit/pipelines/test_diarize.py PASS + 2026-06-13 11:10 UTC | ✅ verified |
+| slicing bounds | P2-04 | P2-T04 | commit d8066f1 + pytest tests/unit/pipelines/test_slice.py PASS + 2026-06-13 11:10 UTC | ✅ verified |
+| clean lineage | P2-05 | P2-T05 | commit d8066f1 + pytest tests/unit/adapters/test_demucs_adapter.py tests/unit/pipelines/test_clean.py PASS + 2026-06-13 11:10 UTC | ✅ verified |
+| transcript 入库 | P2-06 | P2-T06 | commit d8066f1 + pytest tests/unit/adapters/test_whisper_adapter.py tests/unit/pipelines/test_transcribe.py PASS + 2026-06-13 11:10 UTC | ✅ verified |
+| score idempotent | P2-07 | P2-T07 | commit d8066f1 + pytest tests/unit/pipelines/test_score.py PASS + 2026-06-13 11:10 UTC | ✅ verified |
+| job trace | P2-08 | P2-T08 | commit d8066f1 + pytest tests/unit/jobs/test_runner.py PASS + 2026-06-13 11:10 UTC | ✅ verified |
 
 ### 10.3 Definition of Done
 
@@ -366,3 +366,12 @@ P2 Preprocess
 ### 10.4 NOT-成功识别
 
 任一步骤绕过 artifacts/job_events、真实工具失败被吞掉、或 unit suite 依赖真实模型，均不得标 `executed`。
+
+## 11. Work Log
+
+- **2026-06-13 11:06**: Started P2 implementation. Appended new DTO definitions (`AudioProbe`, `DiarizationTurn`, `TranscriptSegment`, `SeparationResult`) to `entities.py`.
+- **2026-06-13 11:07**: Implemented audio adapters `FFmpegAdapter` and `TorchaudioIO`, and external neural adapters `PyannoteAdapter`, `DemucsAdapter`, `UVRAdapter`, and `WhisperAdapter` using mock-friendly checking.
+- **2026-06-13 11:08**: Implemented pipeline workflow steps `ingest.py`, `diarize.py`, `slice.py`, `clean.py`, `transcribe.py`, and `score.py`.
+- **2026-06-13 11:09**: Created task queue execution models in `jobs/events.py`, `jobs/queue.py`, and `jobs/runner.py`.
+- **2026-06-13 11:10**: Set up unit tests covering all pipeline steps and adapters under the virtual environment. Debugged FFmpeg mock parameters to support test suites without local binaries. Verified 14 tests pass successfully and committed progress.
+
