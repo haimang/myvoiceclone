@@ -1,0 +1,109 @@
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional, Dict, Any
+
+@dataclass
+class Speaker:
+    id: str
+    display_name: str
+    role: str  # 'owner', 'other', 'unknown'
+    created_at: Optional[datetime] = None
+    metadata_json: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class Recording:
+    id: str
+    source_uri: str
+    sha256: str
+    duration_sec: float
+    sample_rate: int
+    channels: int
+    status: str
+    metadata_json: Dict[str, Any] = field(default_factory=dict)
+    created_at: Optional[datetime] = None
+
+@dataclass
+class Segment:
+    id: str
+    recording_id: str
+    speaker_id: Optional[str]
+    start_sec: float
+    end_sec: float
+    audio_artifact_id: Optional[str]
+    cleaned_artifact_id: Optional[str]
+    transcript: Optional[str]
+    status: str
+    quality_score: Optional[float] = None
+    speaker_score: Optional[float] = None
+    noise_score: Optional[float] = None
+    overlap_score: Optional[float] = None
+    metadata_json: Dict[str, Any] = field(default_factory=dict)
+    created_at: Optional[datetime] = None
+
+@dataclass
+class Dataset:
+    id: str
+    name: str
+    status: str
+    manifest_artifact_id: Optional[str] = None
+    manifest_sha256: Optional[str] = None
+    filter_json: Dict[str, Any] = field(default_factory=dict)
+    created_at: Optional[datetime] = None
+    frozen_at: Optional[datetime] = None
+
+@dataclass
+class DatasetSegment:
+    dataset_id: str
+    segment_id: str
+    split: str  # 'train', 'val', 'test'
+
+@dataclass
+class Job:
+    id: str
+    name: str
+    status: str  # 'pending', 'running', 'completed', 'failed', 'cancelled'
+    payload_json: Dict[str, Any] = field(default_factory=dict)
+    error_msg: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+@dataclass
+class JobEvent:
+    id: Optional[int]
+    job_id: str
+    event_type: str
+    status_from: Optional[str]
+    status_to: Optional[str]
+    message: Optional[str]
+    created_at: Optional[datetime] = None
+
+@dataclass
+class Artifact:
+    id: str
+    name: str
+    uri: str
+    sha256: str
+    bytes: int
+    artifact_type: str
+    parent_artifact_id: Optional[str] = None
+    job_id: Optional[str] = None
+    metadata_json: Dict[str, Any] = field(default_factory=dict)
+    created_at: Optional[datetime] = None
+
+@dataclass
+class ModelRun:
+    id: str
+    name: str
+    dataset_id: Optional[str]
+    status: str
+    config_json: Dict[str, Any] = field(default_factory=dict)
+    created_at: Optional[datetime] = None
+
+@dataclass
+class Report:
+    id: str
+    name: str
+    report_type: str
+    summary_json: Dict[str, Any] = field(default_factory=dict)
+    artifact_id: Optional[str] = None
+    created_at: Optional[datetime] = None

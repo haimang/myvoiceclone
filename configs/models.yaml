@@ -1,0 +1,14 @@
+pretrained_dir: "models/pretrained"
+checkpoints_dir: "models/checkpoints"
+registry_dir: "models/registry"
+
+pyannote:
+  model_id: "pyannote/speaker-diarization-3.1"
+demucs:
+  model_id: "htdemucs"
+whisper:
+  model_id: "medium"
+rvc:
+  sample_rate: 40000
+sovits:
+  sample_rate: 44100

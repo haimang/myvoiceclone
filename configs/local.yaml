@@ -1,0 +1,3 @@
+db_path: "db/myvoiceclone.sqlite"
+artifact_root: "data/artifacts"
+models_dir: "models"

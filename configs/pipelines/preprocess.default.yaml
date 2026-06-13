@@ -1,0 +1,14 @@
+ingest:
+  allowed_extensions: [".wav", ".mp3", ".flac", ".m4a"]
+diarize:
+  min_speakers: 1
+  max_speakers: 5
+slice:
+  min_duration: 2.0
+  max_duration: 10.0
+clean:
+  denoise_method: "demucs"
+transcribe:
+  language: "zh"
+score:
+  min_quality_score: 0.6
