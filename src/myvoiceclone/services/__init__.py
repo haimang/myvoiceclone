@@ -134,6 +134,33 @@ def service_synth_xtts(
     )
 
 
+def service_run_real_inference(
+    conn: sqlite3.Connection,
+    text: str,
+    reference_artifact_id: str,
+    model_id: str,
+    config: Dict[str, Any] = None,
+    source_artifact_id: Optional[str] = None,
+    language: str = "en",
+    adapter_mode: str = "real",
+) -> Any:
+    from myvoiceclone.pipelines.infer_real import RealInferenceRequest, run_real_inference
+    artifact_store = _make_artifact_store(conn)
+    return run_real_inference(
+        conn,
+        artifact_store,
+        RealInferenceRequest(
+            text=text,
+            reference_artifact_id=reference_artifact_id,
+            model_id=model_id,
+            source_artifact_id=source_artifact_id,
+            language=language,
+            adapter_mode=adapter_mode,
+            config=config or {},
+        ),
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Evaluation / Report Services
 # ─────────────────────────────────────────────────────────────────────────────
@@ -161,6 +188,31 @@ def service_generate_train_report(
     from myvoiceclone.eval.report import generate_train_report
     artifact_store = _make_artifact_store(conn)
     return generate_train_report(conn, artifact_store, report_id, model_run_id)
+
+
+def service_generate_subjective_report(
+    conn: sqlite3.Connection,
+    report_id: str,
+    run_id: str,
+    abx_score: float,
+    mos_score: float,
+    reviewer: str,
+    comment: str = "",
+    sample_artifact_id: Optional[str] = None,
+) -> Any:
+    from myvoiceclone.eval.subjective import generate_subjective_report
+    artifact_store = _make_artifact_store(conn)
+    return generate_subjective_report(
+        conn,
+        artifact_store,
+        report_id=report_id,
+        run_id=run_id,
+        abx_score=abx_score,
+        mos_score=mos_score,
+        reviewer=reviewer,
+        comment=comment,
+        sample_artifact_id=sample_artifact_id,
+    )
 
 
 def service_evaluate_long_train_gate(

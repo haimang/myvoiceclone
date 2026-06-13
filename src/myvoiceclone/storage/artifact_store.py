@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from myvoiceclone.domain.entities import Artifact
 from myvoiceclone.storage.repositories import dict_to_json, json_to_dict, parse_datetime
+from myvoiceclone.config import resolve_mock_adapters
 
 class ArtifactStore:
     def __init__(self, conn: sqlite3.Connection, root_dir: str):
@@ -43,7 +44,16 @@ class ArtifactStore:
         with open(abs_path, 'wb') as f:
             f.write(content)
             
-        metadata = metadata_json or {}
+        metadata = metadata_json.copy() if metadata_json else {}
+        metadata.setdefault("adapter_mode", "mock" if resolve_mock_adapters() else "real")
+        metadata.setdefault("metric_source", "artifact")
+        metadata.setdefault("metadata_contract_version", "first-test-v1")
+        metadata.setdefault("tool", metadata.get("tool"))
+        metadata.setdefault("model", metadata.get("model"))
+        metadata.setdefault("version", metadata.get("version"))
+        metadata.setdefault("device", metadata.get("device"))
+        metadata.setdefault("cache", metadata.get("cache"))
+        metadata.setdefault("license", metadata.get("license"))
         
         # Save to DB
         self.conn.execute(

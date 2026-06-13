@@ -97,6 +97,7 @@ class JobEvent:
     status_from: Optional[str]
     status_to: Optional[str]
     message: Optional[str]
+    metadata_json: Dict[str, Any] = field(default_factory=dict)
     created_at: Optional[datetime] = None
 
 @dataclass

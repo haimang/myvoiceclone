@@ -1,0 +1,4 @@
+{
+  "required_keys": ["id", "status", "name", "adapter_mode", "config", "links"],
+  "links": ["self", "status", "upload_audio", "trace"]
+}

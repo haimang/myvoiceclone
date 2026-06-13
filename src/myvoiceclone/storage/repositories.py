@@ -333,13 +333,21 @@ class JobRepository:
             )
         )
 
-    def add_event(self, job_id: str, event_type: str, status_from: Optional[str], status_to: Optional[str], message: Optional[str]):
+    def add_event(
+        self,
+        job_id: str,
+        event_type: str,
+        status_from: Optional[str],
+        status_to: Optional[str],
+        message: Optional[str],
+        metadata_json: Optional[Dict[str, Any]] = None,
+    ):
         self.conn.execute(
             """
-            INSERT INTO job_events (job_id, event_type, status_from, status_to, message)
-            VALUES (?, ?, ?, ?, ?);
+            INSERT INTO job_events (job_id, event_type, status_from, status_to, message, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?);
             """,
-            (job_id, event_type, status_from, status_to, message)
+            (job_id, event_type, status_from, status_to, message, dict_to_json(metadata_json))
         )
 
     def get_by_id(self, id: str) -> Optional[Job]:
@@ -405,7 +413,13 @@ class JobRepository:
 
     def get_events(self, job_id: str) -> List[JobEvent]:
         cursor = self.conn.cursor()
-        cursor.execute("SELECT id, job_id, event_type, status_from, status_to, message, created_at FROM job_events WHERE job_id = ? ORDER BY id;", (job_id,))
+        cursor.execute(
+            """
+            SELECT id, job_id, event_type, status_from, status_to, message, metadata_json, created_at
+            FROM job_events WHERE job_id = ? ORDER BY id;
+            """,
+            (job_id,),
+        )
         return [
             JobEvent(
                 id=row["id"],
@@ -414,6 +428,7 @@ class JobRepository:
                 status_from=row["status_from"],
                 status_to=row["status_to"],
                 message=row["message"],
+                metadata_json=json_to_dict(row["metadata_json"]),
                 created_at=parse_datetime(row["created_at"])
             )
             for row in cursor.fetchall()
