@@ -312,10 +312,10 @@ P0 Scope Freeze
 
 | 收口目标 | 工作项 | Test-ID | PASS 证据（四元组）| 状态 |
 |----------|--------|---------|---------------------|------|
-| 目标可引用 | P0-01 | P0-T01 | commit {sha} + docs-review:P0-scope PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| 安全后置明确 | P0-02 | P0-T02 | commit {sha} + docs-review:P0-security-boundary PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| 分层可测试 | P0-03 | P0-T03 | commit {sha} + pytest tests/unit/test_architecture_boundaries.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| markers 可复用 | P0-04 | P0-T04 | commit {sha} + pytest tests/unit/test_pytest_markers.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
+| 目标可引用 | P0-01 | P0-T01 | commit 9afc438 + docs-review:P0-scope PASS + 2026-06-13 11:00 UTC | ✅ verified |
+| 安全后置明确 | P0-02 | P0-T02 | commit 9afc438 + docs-review:P0-security-boundary PASS + 2026-06-13 11:00 UTC | ✅ verified |
+| 分层可测试 | P0-03 | P0-T03 | commit 9afc438 + pytest tests/unit/test_architecture_boundaries.py PASS + 2026-06-13 11:00 UTC | ✅ verified |
+| markers 可复用 | P0-04 | P0-T04 | commit 9afc438 + pytest tests/unit/test_pytest_markers.py PASS + 2026-06-13 11:00 UTC | ✅ verified |
 
 ### 10.3 Definition of Done
 
@@ -330,3 +330,14 @@ P0 Scope Freeze
 ### 10.4 NOT-成功识别
 
 任一 P0-T 测试未观察或 P1 无法消费 P0 边界，不得标 `executed`。
+
+## 11. Work Log
+
+- **2026-06-13 10:55**: Initiated P0 Scope Freeze & Architecture Charter phase.
+- **2026-06-13 10:57**: Updated status of `00-scope-architecture.md` to `frozen` to lock down design goals and constraints.
+- **2026-06-13 10:59**: Created layer dependency specification in `docs/architecture/layers.md` detailing domain, storage, pipelines, adapters, jobs, api, cli, and eval boundary requirements.
+- **2026-06-13 11:00**: Set up `pytest.ini` with custom markers matching final execution plan (unit, api, cli, integration, live, gpu, slow).
+- **2026-06-13 11:01**: Implemented unit tests `tests/unit/test_pytest_markers.py` and `tests/unit/test_architecture_boundaries.py`.
+- **2026-06-13 11:02**: Created Python virtual environment and executed all tests successfully. Committed all P0 files to repository.
+- **2026-06-13 11:03**: Created P0 phase closure report at `docs/closure/00-scope-architecture-closure.md`.
+
