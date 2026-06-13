@@ -87,3 +87,77 @@ def test_job_runner_failure(db_conn, artifact_store):
     assert failed_steps
     assert failed_steps[0].metadata_json["step"] == "ingest"
     assert "Source file not found" in failed_steps[0].metadata_json["error"]
+
+
+@pytest.mark.unit
+def test_job_runner_curate_step_marks_processed_segments_keep(db_conn, artifact_store):
+    db_conn.execute(
+        """
+        INSERT INTO recordings (id, source_uri, sha256, duration_sec, sample_rate, channels, status)
+        VALUES ('rec_curate', 'uri', 'sha', 3.0, 16000, 1, 'processed');
+        """
+    )
+    db_conn.execute(
+        """
+        INSERT INTO segments (id, recording_id, start_sec, end_sec, status, quality_score)
+        VALUES ('seg_curate', 'rec_curate', 0.0, 3.0, 'processed', 0.9);
+        """
+    )
+    db_conn.commit()
+    queue = JobQueue(db_conn)
+    job = queue.enqueue("curate", {"recording_id": "rec_curate"})
+
+    JobRunner(db_conn, artifact_store).run(job.id)
+
+    row = db_conn.execute("SELECT status, metadata_json FROM segments WHERE id = 'seg_curate';").fetchone()
+    assert row["status"] == "keep"
+    events = JobRepository(db_conn).get_events(job.id)
+    assert events[-1].status_to == "completed"
+
+
+@pytest.mark.unit
+def test_job_runner_dispatches_infer_real(db_conn, artifact_store, monkeypatch):
+    monkeypatch.setenv("MOCK_ADAPTERS", "true")
+    reference = artifact_store.create_artifact(
+        name="reference.wav",
+        content=b"RIFFreference",
+        artifact_type="cleaned",
+        metadata_json={"adapter_mode": "real"},
+    )
+    queue = JobQueue(db_conn)
+    job = queue.enqueue(
+        "infer_real",
+        {"text": "hello", "reference_artifact_id": reference.id, "adapter_mode": "mock"},
+    )
+
+    JobRunner(db_conn, artifact_store).run(job.id)
+
+    row = db_conn.execute("SELECT id, artifact_type, job_id FROM artifacts WHERE job_id = ?;", (job.id,)).fetchone()
+    assert row is not None
+    assert row["artifact_type"] == "rendered_audio"
+    assert row["job_id"] == job.id
+
+
+@pytest.mark.unit
+def test_job_runner_dispatches_eval_first_test(db_conn, artifact_store, synthetic_wav):
+    with open(synthetic_wav, "rb") as handle:
+        wav_bytes = handle.read()
+    inference_artifact = artifact_store.create_artifact(
+        name="rendered.wav",
+        content=wav_bytes,
+        artifact_type="rendered_audio",
+        metadata_json={"adapter_mode": "real"},
+    )
+    queue = JobQueue(db_conn)
+    job = queue.enqueue(
+        "eval_first_test",
+        {"run_id": "run_eval", "inference_artifact_id": inference_artifact.id},
+    )
+
+    JobRunner(db_conn, artifact_store).run(job.id)
+
+    report = db_conn.execute("SELECT * FROM reports WHERE subject_id = 'run_eval';").fetchone()
+    assert report is not None
+    assert report["report_type"] == "first_test_eval"
+    events = JobRepository(db_conn).get_events(job.id)
+    assert events[-1].status_to == "completed"

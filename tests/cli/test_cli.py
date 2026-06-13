@@ -123,3 +123,33 @@ def test_cli_real_inference_smoke(monkeypatch):
 
     assert result.exit_code == 0
     assert "Inference artifact: art_cli_real" in result.output
+
+
+@pytest.mark.cli
+def test_cli_eval_uses_evaluation_pipeline(monkeypatch):
+    class FakeConn:
+        def close(self):
+            pass
+
+    class FakeRunRepo:
+        def __init__(self, conn):
+            pass
+
+        def get_by_id(self, run_id):
+            return object()
+
+    captured = {}
+
+    def fake_run_evaluation(conn, artifact_store, run_id):
+        captured["run_id"] = run_id
+        return {"status": "degraded", "reason": "fixture"}
+
+    monkeypatch.setattr("myvoiceclone.cli.get_db_conn", lambda: FakeConn())
+    monkeypatch.setattr("myvoiceclone.cli.ModelRunRepository", FakeRunRepo)
+    monkeypatch.setattr("myvoiceclone.pipelines.evaluate.run_evaluation", fake_run_evaluation)
+
+    result = runner.invoke(app, ["eval", "run_123"])
+
+    assert result.exit_code == 0
+    assert captured == {"run_id": "run_123"}
+    assert "Evaluation completed" in result.output

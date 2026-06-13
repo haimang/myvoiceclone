@@ -26,11 +26,9 @@ def test_create_run_contract_snapshot(client):
     body = create_run(client)
     contract_path = os.path.join(os.path.dirname(__file__), "contracts", "first_test_run_create.json")
     contract = json.load(open(contract_path, encoding="utf-8"))
+    normalized = json.loads(json.dumps(body).replace(body["id"], "<run_id>"))
 
-    assert set(contract["required_keys"]) <= set(body)
-    assert set(contract["links"]) <= set(body["links"])
-    assert body["status"] == "pending"
-    assert body["adapter_mode"] == "real"
+    assert normalized == contract
 
 
 @pytest.mark.api

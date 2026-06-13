@@ -33,6 +33,14 @@ def test_inference_contract_requires_text_and_reference():
 
 
 @pytest.mark.unit
+def test_inference_contract_rejects_unsupported_model_id():
+    with pytest.raises(ValueError, match="Unsupported first-test real inference model_id"):
+        validate_inference_request(
+            RealInferenceRequest(text="hello", reference_artifact_id="art_ref", model_id="rvc/non_xtts")
+        )
+
+
+@pytest.mark.unit
 def test_real_inference_wrapper_writes_artifact_metadata(db_conn, artifact_store):
     db_conn.execute(
         """

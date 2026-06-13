@@ -1,4 +1,15 @@
 {
-  "required_keys": ["id", "status", "name", "adapter_mode", "config", "links"],
-  "links": ["self", "status", "upload_audio", "trace"]
+  "id": "<run_id>",
+  "status": "pending",
+  "name": "contract-run",
+  "adapter_mode": "real",
+  "config": {
+    "seed": 1
+  },
+  "links": {
+    "self": "/api/runs/<run_id>",
+    "status": "/api/runs/<run_id>/status",
+    "upload_audio": "/api/runs/<run_id>/audio",
+    "trace": "/api/audit/trace?subject_type=job&subject_id=<run_id>"
+  }
 }
