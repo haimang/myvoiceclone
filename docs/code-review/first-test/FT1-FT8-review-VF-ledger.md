@@ -170,7 +170,7 @@
 | V1 | fixed | 新增 `run_curation`，runner curate job 可执行并有测试覆盖 | `src/myvoiceclone/pipelines/curate.py`, `src/myvoiceclone/jobs/runner.py`, `tests/unit/jobs/test_runner.py` | independently-verified |
 | V2 | fixed | runner 增加 `infer_real` 与 `eval_first_test` dispatch | `src/myvoiceclone/jobs/runner.py`, `tests/unit/jobs/test_runner.py` | independently-verified |
 | V3 | fixed | CLI eval 改走 service/evaluation pipeline；first-test artifact eval 生成 report 并运行 smoke | `src/myvoiceclone/cli.py`, `src/myvoiceclone/services/__init__.py`, `src/myvoiceclone/pipelines/evaluate.py`, `tests/cli/test_cli.py`, `tests/unit/jobs/test_runner.py` | independently-verified |
-| V4 | fixed | closure 证据锚点改为当前 `uncommitted working tree on HEAD 31b4a04`，刷新 evidence pack | `docs/closure/first-test/*.md`, evidence pack | independently-verified |
+| V4 | fixed | closure 证据锚点改为当前 `uncommitted working tree on HEAD 952fbc5`，刷新 evidence pack | `docs/closure/first-test/*.md`, evidence pack | independently-verified |
 | V5 | fixed | Dockerfile copy `db/migrations`，compose 开发挂载保留外部数据路径 | `infra/docker/Dockerfile.preprocess`, `infra/docker/Dockerfile.train`, `tests/unit/test_docker_first_test_contract.py` | independently-verified |
 | V6 | fixed | 训练镜像不再安装 `audio` extra，避免 unconstrained `torchaudio` 覆盖 NGC 预装 | `infra/docker/Dockerfile.train`, `tests/unit/test_docker_first_test_contract.py` | independently-verified |
 | V7 | fixed | 新增 `.dockerignore` 排除 venv/data/models/audio/checkpoint 等，显式保留 migrations | `.dockerignore`, `tests/unit/test_docker_first_test_contract.py` | independently-verified |
