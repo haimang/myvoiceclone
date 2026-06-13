@@ -23,7 +23,7 @@ def get_connection(db_path: str, load_vec: bool = True) -> sqlite3.Connection:
     if db_path != ":memory:" and not os.path.exists(os.path.dirname(db_path)) and os.path.dirname(db_path):
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.execute("PRAGMA foreign_keys = ON;")
     # In-memory databases do not support WAL journal mode.
     if db_path != ":memory:":

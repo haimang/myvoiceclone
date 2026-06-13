@@ -260,6 +260,23 @@ class DatasetRepository:
             frozen_at=parse_datetime(row["frozen_at"])
         )
 
+    def list_all(self) -> List[Dataset]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM datasets ORDER BY created_at DESC;")
+        return [
+            Dataset(
+                id=row["id"],
+                name=row["name"],
+                status=row["status"],
+                manifest_artifact_id=row["manifest_artifact_id"],
+                manifest_sha256=row["manifest_sha256"],
+                filter_json=json_to_dict(row["filter_json"]),
+                created_at=parse_datetime(row["created_at"]),
+                frozen_at=parse_datetime(row["frozen_at"])
+            )
+            for row in cursor.fetchall()
+        ]
+
     def add_segment(self, dataset_id: str, segment_id: str, split: str):
         self.conn.execute(
             """
@@ -323,6 +340,22 @@ class JobRepository:
             created_at=parse_datetime(row["created_at"]),
             updated_at=parse_datetime(row["updated_at"])
         )
+
+    def list_all(self) -> List[Job]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id, name, status, payload_json, error_msg, created_at, updated_at FROM jobs ORDER BY created_at DESC;")
+        return [
+            Job(
+                id=row["id"],
+                name=row["name"],
+                status=row["status"],
+                payload_json=json_to_dict(row["payload_json"]),
+                error_msg=row["error_msg"],
+                created_at=parse_datetime(row["created_at"]),
+                updated_at=parse_datetime(row["updated_at"])
+            )
+            for row in cursor.fetchall()
+        ]
 
     def get_events(self, job_id: str) -> List[JobEvent]:
         cursor = self.conn.cursor()
@@ -403,3 +436,18 @@ class ReportRepository:
             artifact_id=row["artifact_id"],
             created_at=parse_datetime(row["created_at"])
         )
+
+    def list_all(self) -> List[Report]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id, name, report_type, summary_json, artifact_id, created_at FROM reports ORDER BY created_at DESC;")
+        return [
+            Report(
+                id=row["id"],
+                name=row["name"],
+                report_type=row["report_type"],
+                summary_json=json_to_dict(row["summary_json"]),
+                artifact_id=row["artifact_id"],
+                created_at=parse_datetime(row["created_at"])
+            )
+            for row in cursor.fetchall()
+        ]

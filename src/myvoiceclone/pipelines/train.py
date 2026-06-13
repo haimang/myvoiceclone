@@ -12,13 +12,17 @@ from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
 def run_train_rvc(
     conn: sqlite3.Connection,
     artifact_store: ArtifactStore,
-    rvc_adapter: RvcAdapter,
     dataset_id: str,
     model_name: str,
     config: Dict[str, Any],
+    rvc_adapter: Optional[Any] = None,
     source_audio_path: Optional[str] = None,
     job_id: Optional[str] = None
 ) -> ModelRun:
+    if rvc_adapter is None:
+        from myvoiceclone.adapters.training.rvc_adapter import RvcAdapter
+        rvc_adapter = RvcAdapter()
+        
     ds_repo = DatasetRepository(conn)
     ds = ds_repo.get_by_id(dataset_id)
     if not ds:
@@ -114,12 +118,16 @@ def run_train_rvc(
 def run_synth_xtts(
     conn: sqlite3.Connection,
     artifact_store: ArtifactStore,
-    xtts_adapter: XttsAdapter,
     speaker_id: str,
     text: str,
     config: Dict[str, Any],
+    xtts_adapter: Optional[Any] = None,
     job_id: Optional[str] = None
 ) -> ModelRun:
+    if xtts_adapter is None:
+        from myvoiceclone.adapters.training.xtts_adapter import XttsAdapter
+        xtts_adapter = XttsAdapter()
+        
     run_repo = ModelRunRepository(conn)
     run_id = f"run_{uuid.uuid4().hex[:12]}"
     
@@ -267,14 +275,18 @@ def run_prepare_features(
 def run_train_sovits(
     conn: sqlite3.Connection,
     artifact_store: ArtifactStore,
-    sovits_adapter: SovitsAdapter,
     dataset_id: str,
     model_name: str,
     config: Dict[str, Any],
+    sovits_adapter: Optional[Any] = None,
     model_run_id: Optional[str] = None,
     resume_from_checkpoint_id: Optional[str] = None,
     job_id: Optional[str] = None
 ) -> ModelRun:
+    if sovits_adapter is None:
+        from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
+        sovits_adapter = SovitsAdapter()
+        
     ds_repo = DatasetRepository(conn)
     ds = ds_repo.get_by_id(dataset_id)
     if not ds:

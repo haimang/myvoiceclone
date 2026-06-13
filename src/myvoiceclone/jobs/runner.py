@@ -29,20 +29,40 @@ class JobRunner:
         self,
         conn: sqlite3.Connection,
         artifact_store: ArtifactStore,
-        ffmpeg_adapter: FFmpegAdapter,
-        pyannote_adapter: PyannoteAdapter,
-        demucs_adapter: DemucsAdapter,
-        whisper_adapter: WhisperAdapter,
-        sovits_adapter: Optional[SovitsAdapter] = None
+        ffmpeg_adapter: Optional[Any] = None,
+        pyannote_adapter: Optional[Any] = None,
+        demucs_adapter: Optional[Any] = None,
+        whisper_adapter: Optional[Any] = None,
+        sovits_adapter: Optional[Any] = None
     ):
         self.conn = conn
         self.repo = JobRepository(conn)
         self.artifact_store = artifact_store
+        
+        if ffmpeg_adapter is None:
+            from myvoiceclone.adapters.audio.ffmpeg import FFmpegAdapter
+            ffmpeg_adapter = FFmpegAdapter()
         self.ffmpeg_adapter = ffmpeg_adapter
+        
+        if pyannote_adapter is None:
+            from myvoiceclone.adapters.diarization.pyannote_adapter import PyannoteAdapter
+            pyannote_adapter = PyannoteAdapter()
         self.pyannote_adapter = pyannote_adapter
+        
+        if demucs_adapter is None:
+            from myvoiceclone.adapters.separation.demucs_adapter import DemucsAdapter
+            demucs_adapter = DemucsAdapter()
         self.demucs_adapter = demucs_adapter
+        
+        if whisper_adapter is None:
+            from myvoiceclone.adapters.asr.whisper_adapter import WhisperAdapter
+            whisper_adapter = WhisperAdapter()
         self.whisper_adapter = whisper_adapter
-        self.sovits_adapter = sovits_adapter or SovitsAdapter()
+        
+        if sovits_adapter is None:
+            from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
+            sovits_adapter = SovitsAdapter()
+        self.sovits_adapter = sovits_adapter
 
     def run(self, job_id: str) -> None:
         job = self.repo.get_by_id(job_id)

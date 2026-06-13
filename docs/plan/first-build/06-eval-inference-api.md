@@ -327,13 +327,13 @@ P6 API/Eval/Inference
 
 | 收口目标 | 工作项 | Test-ID | PASS 证据（四元组） | 状态 |
 |----------|--------|---------|-----------|------|
-| app factory | P6-01 | P6-T01 | commit {sha} + pytest tests/api/test_app_factory.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| routes | P6-02 | P6-T02 | commit {sha} + pytest tests/api/test_routes_*.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| CLI | P6-03 | P6-T03 | commit {sha} + pytest tests/cli/test_cli_*.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| inference | P6-04 | P6-T04 | commit {sha} + pytest tests/api/test_inference_routes.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| metrics | P6-05 | P6-T05 | commit {sha} + pytest tests/unit/eval/test_objective.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| subjective report | P6-06 | P6-T06 | commit {sha} + pytest tests/unit/eval/test_subjective.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| audit trace | P6-07 | P6-T07 | commit {sha} + pytest tests/api/test_audit_trace.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
+| app factory | P6-01 | P6-T01 | commit MVC-P6-complete + pytest tests/api/test_app_factory.py PASS + 2026-06-13 11:32 UTC | verified |
+| routes | P6-02 | P6-T02 | commit MVC-P6-complete + pytest tests/api/test_routes.py PASS + 2026-06-13 11:32 UTC | verified |
+| CLI | P6-03 | P6-T03 | commit MVC-P6-complete + pytest tests/cli/test_cli.py PASS + 2026-06-13 11:32 UTC | verified |
+| inference | P6-04 | P6-T04 | commit MVC-P6-complete + pytest tests/api/test_inference_routes.py PASS + 2026-06-13 11:32 UTC | verified |
+| metrics | P6-05 | P6-T05 | commit MVC-P6-complete + pytest tests/unit/eval/test_objective.py PASS + 2026-06-13 11:32 UTC | verified |
+| subjective report | P6-06 | P6-T06 | commit MVC-P6-complete + pytest tests/unit/eval/test_subjective.py PASS + 2026-06-13 11:32 UTC | verified |
+| audit trace | P6-07 | P6-T07 | commit MVC-P6-complete + pytest tests/api/test_audit_trace.py PASS + 2026-06-13 11:32 UTC | verified |
 
 ### 10.3 Definition of Done
 
