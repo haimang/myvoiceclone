@@ -66,3 +66,12 @@ def resolve_models_dir(models_dir: Optional[str] = None) -> str:
         config = load_local_config()
         models_dir = os.environ.get("MODELS_DIR") or config.get("models_dir", "models")
     return _resolve_project_path(models_dir)
+
+
+def resolve_mock_adapters(default: bool = True) -> bool:
+    """Resolve MOCK_ADAPTERS as a runtime boolean flag."""
+    config = load_local_config()
+    value = os.environ.get("MOCK_ADAPTERS", config.get("mock_adapters", default))
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}

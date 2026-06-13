@@ -13,13 +13,28 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-api = ["fastapi", "uvicorn", "pydantic"]
+api = ["fastapi", "uvicorn", "pydantic", "python-multipart"]
 cli = ["typer"]
 db = ["sqlite-vec"]
 audio = ["soundfile", "torchaudio"]
 preprocess = ["pyannote.audio", "openai-whisper", "demucs"]
 test = ["pytest", "httpx"]
 dev = ["ruff", "mypy"]
+first-test = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "python-multipart",
+    "typer",
+    "sqlite-vec",
+    "soundfile",
+    "torchaudio",
+    "pyannote.audio",
+    "openai-whisper",
+    "demucs",
+    "pytest",
+    "httpx",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

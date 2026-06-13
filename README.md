@@ -16,43 +16,44 @@ source venv/bin/activate
 
 ### 1.2 Initialize Database
 ```bash
-mvc init-db
+myvoiceclone init-db
 ```
 
 ### 1.3 Verify Extension Loading & Vector Store Health
 ```bash
-mvc vec-health
+myvoiceclone vec-health
 ```
 
 ### 1.4 Preprocess Audio (Ingest & Diarize & Transcribe & Score)
 ```bash
-mvc ingest [WAV_FILEPATH]
+myvoiceclone ingest [WAV_FILEPATH]
 # Or run end-to-end preprocess:
-# mvc run diarize RECORDING_ID
+myvoiceclone run preprocess-all [WAV_FILEPATH]
+myvoiceclone run diarize RECORDING_ID
 ```
 
 ### 1.5 Dataset Creation & Freezing
 ```bash
 # Curate keeping keep-status segments
-mvc dataset create first-build --filter keep
-mvc dataset freeze first-build
+myvoiceclone dataset create first-build --filter keep
+myvoiceclone dataset freeze first-build
 ```
 
 ### 1.6 Training Models
 ```bash
-mvc train sovits --dataset first-build --profile long
+myvoiceclone train sovits --dataset first-build --profile long
 ```
 
 ### 1.7 Objective & Subjective Evaluation
 ```bash
-mvc eval [MODEL_RUN_ID] --suite default
-mvc report show [REPORT_ID]
+myvoiceclone eval [MODEL_RUN_ID] --suite default
+myvoiceclone report show [REPORT_ID]
 ```
 
 ### 1.8 Release Gate and Audit Trace
 ```bash
 # Query audit trace for full path lineage of a recording
-mvc audit recording RECORDING_ID
+myvoiceclone audit recording RECORDING_ID
 ```
 
 ---

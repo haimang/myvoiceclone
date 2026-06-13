@@ -89,9 +89,27 @@ def ingest(filepath: str, dry_run: bool = typer.Option(False, "--dry-run", help=
     finally:
         conn.close()
 
+@run_app.command("preprocess-all")
+def run_preprocess_all(
+    filepath: str = typer.Argument(..., help="Audio file path to ingest and preprocess"),
+    min_duration: float = typer.Option(2.0, help="Minimum segment duration in seconds"),
+    max_duration: float = typer.Option(10.0, help="Maximum segment duration in seconds"),
+    min_quality_score: float = typer.Option(0.6, help="Minimum segment quality threshold"),
+):
+    _run_step_job(
+        "preprocess_all",
+        {
+            "filepath": filepath,
+            "min_duration": min_duration,
+            "max_duration": max_duration,
+            "min_quality_score": min_quality_score,
+        },
+    )
+
+
 @run_app.command("diarize")
 def run_diarize(recording_id: str):
-    _run_step_job("preprocess_all", {"recording_id": recording_id}) # standard pipeline wrapper
+    _run_step_job("diarize", {"recording_id": recording_id})
 
 def _run_step_job(name: str, payload: dict):
     conn = get_db_conn()
@@ -280,6 +298,34 @@ def infer_vc(model: str, input_path: str, out_path: str):
     with open(out_path, 'wb') as f:
         f.write(b"fake_rendered_converted_voice_output")
     typer.echo(f"Inference complete. Output saved to {out_path}")
+
+
+@infer_app.command("real")
+def infer_real(
+    text: str = typer.Option(..., help="Text to synthesize"),
+    reference_artifact_id: str = typer.Option(..., help="Reference cleaned audio artifact id"),
+    model_id: str = typer.Option("tts_models/multilingual/multi-dataset/xtts_v2", help="Inference model id"),
+    language: str = typer.Option("en", help="Synthesis language"),
+):
+    conn = get_db_conn()
+    try:
+        from myvoiceclone.services import service_run_real_inference
+
+        artifact = service_run_real_inference(
+            conn=conn,
+            text=text,
+            reference_artifact_id=reference_artifact_id,
+            model_id=model_id,
+            language=language,
+            adapter_mode="real",
+        )
+        typer.echo(f"Inference artifact: {artifact.id}")
+        typer.echo(f"URI: {artifact.uri}")
+    except Exception as e:
+        typer.echo(f"Real inference failed: {e}")
+        raise typer.Exit(code=1)
+    finally:
+        conn.close()
 
 @report_app.command("show")
 def report_show(report_id: str):

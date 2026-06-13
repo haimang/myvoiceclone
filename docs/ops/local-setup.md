@@ -66,9 +66,10 @@ You can build and execute the preprocessing and training pipelines inside isolat
 ### 4.1 Set Environment Variables (`.env`)
 Create a `.env` file in the project root:
 ```env
-DB_PATH=db/myvoiceclone.sqlite
-ARTIFACT_ROOT=data/artifacts
-MODELS_DIR=models
+DB_PATH=/mnt/usb/workspace/myvoiceresearch/myvoiceclone.sqlite
+ARTIFACT_ROOT=/mnt/usb/workspace/myvoiceresearch/artifacts
+MODELS_DIR=/mnt/usb/workspace/myvoiceresearch/models
+MOCK_ADAPTERS=true
 ```
 
 ### 4.2 Run Preprocessing Container
