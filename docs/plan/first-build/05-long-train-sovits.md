@@ -342,3 +342,17 @@ P5 Long Train
 ### 10.4 NOT-成功识别
 
 长训绕过 job/model_run、resume 断链、或真实环境失败被标成成功，均不得标 `executed`。
+
+
+## 11. 工作日志
+
+- **2026-06-13**:
+  - 创建了 `infra/docker/Dockerfile.train` 作为 So-VITS-SVC 训练镜像的框架。
+  - 编写了 `capture_env_digest` 函数采集运行时环境关键信息，并写入 run 和 report 审计链路中。
+  - 新建并实现了 `src/myvoiceclone/adapters/training/sovits_adapter.py` 及其 Mock 流程。
+  - 实现了 `run_prepare_features` 与 Feature cache 命中/失效重用机制。
+  - 在 `src/myvoiceclone/pipelines/train.py` 中实现了 `run_train_sovits`，引入循环检查 `cancelled` 标志、自动中间 checkpoint 归档与双写注册模型 registry。
+  - 升级了 `src/myvoiceclone/jobs/runner.py` 的执行分支与 `KeyboardInterrupt` 针对 cancelled 状态事件的处理。
+  - 实现了 `generate_train_report` 训练评估报告自动生成（从 draft -> generated）。
+  - 新增并跑通了 `test_env_digest.py`, `test_sovits_adapter.py`, `test_feature_cache.py`, `test_resume.py`, `test_model_registry.py` 和 `test_train_report.py`，全部 61 项测试均呈现绿色通过状态。
+

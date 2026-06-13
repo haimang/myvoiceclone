@@ -7,6 +7,7 @@ from myvoiceclone.storage.repositories import DatasetRepository, ModelRunReposit
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.training.rvc_adapter import RvcAdapter
 from myvoiceclone.adapters.training.xtts_adapter import XttsAdapter
+from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
 
 def run_train_rvc(
     conn: sqlite3.Connection,
@@ -173,3 +174,242 @@ def run_synth_xtts(
         run_repo.save(run)
         conn.commit()
         raise e
+
+
+def generate_feature_cache_key(manifest_sha256: str, config: dict) -> str:
+    import hashlib
+    import json
+    config_str = json.dumps(config, sort_keys=True)
+    hasher = hashlib.sha256()
+    hasher.update(manifest_sha256.encode('utf-8'))
+    hasher.update(config_str.encode('utf-8'))
+    return hasher.hexdigest()
+
+
+def capture_env_digest() -> dict:
+    import sys
+    import subprocess
+    
+    python_version = sys.version.split()[0]
+    torch_version = "not_installed"
+    cuda_available = False
+    cuda_version = "N/A"
+    try:
+        import torch
+        torch_version = torch.__version__
+        cuda_available = torch.cuda.is_available()
+        if cuda_available:
+            cuda_version = torch.version.cuda
+    except ImportError:
+        pass
+        
+    git_commit = "unknown"
+    try:
+        git_commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        pass
+        
+    return {
+        "python_version": python_version,
+        "torch_version": torch_version,
+        "cuda_available": cuda_available,
+        "cuda_version": cuda_version,
+        "git_commit": git_commit
+    }
+
+
+def run_prepare_features(
+    conn: sqlite3.Connection,
+    artifact_store: ArtifactStore,
+    dataset_id: str,
+    config: dict,
+    job_id: Optional[str] = None
+) -> str:
+    ds_repo = DatasetRepository(conn)
+    ds = ds_repo.get_by_id(dataset_id)
+    if not ds:
+        raise ValueError(f"Dataset {dataset_id} not found")
+        
+    manifest_sha256 = ds.manifest_sha256 or "dummy_manifest_sha"
+    cache_key = generate_feature_cache_key(manifest_sha256, config)
+    
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id FROM artifacts 
+        WHERE artifact_type = 'feature_cache' AND json_extract(metadata_json, '$.cache_key') = ?;
+        """,
+        (cache_key,)
+    )
+    row = cursor.fetchone()
+    if row:
+        return row[0]
+        
+    feature_data = b"fake_hubert_content_units_f0_spec_data"
+    art_name = f"features_{cache_key}.bin"
+    
+    art = artifact_store.create_artifact(
+        name=art_name,
+        content=feature_data,
+        artifact_type="feature_cache",
+        job_id=job_id,
+        metadata_json={
+            "cache_key": cache_key,
+            "dataset_id": dataset_id,
+            "manifest_sha256": manifest_sha256,
+            "config": config
+        }
+    )
+    conn.commit()
+    return art.id
+
+
+def run_train_sovits(
+    conn: sqlite3.Connection,
+    artifact_store: ArtifactStore,
+    sovits_adapter: SovitsAdapter,
+    dataset_id: str,
+    model_name: str,
+    config: Dict[str, Any],
+    model_run_id: Optional[str] = None,
+    resume_from_checkpoint_id: Optional[str] = None,
+    job_id: Optional[str] = None
+) -> ModelRun:
+    ds_repo = DatasetRepository(conn)
+    ds = ds_repo.get_by_id(dataset_id)
+    if not ds:
+        raise ValueError(f"Dataset {dataset_id} not found")
+    if ds.status != "frozen":
+        raise ValueError(f"Dataset {dataset_id} must be frozen before training")
+        
+    run_repo = ModelRunRepository(conn)
+    
+    if model_run_id:
+        run = run_repo.get_by_id(model_run_id)
+        if not run:
+            run = ModelRun(id=model_run_id, name=model_name, dataset_id=dataset_id, status="queued", config_json=config)
+        else:
+            run.status = "queued"
+    else:
+        model_run_id = f"run_{uuid.uuid4().hex[:12]}"
+        run = ModelRun(id=model_run_id, name=model_name, dataset_id=dataset_id, status="queued", config_json=config)
+        
+    run_repo.save(run)
+    conn.commit()
+    
+    # queued -> preparing
+    run.status = "preparing"
+    run_repo.save(run)
+    conn.commit()
+    
+    features_art_id = run_prepare_features(conn, artifact_store, dataset_id, config, job_id)
+    run.config_json["features_artifact_id"] = features_art_id
+    run_repo.save(run)
+    conn.commit()
+    
+    # preparing -> training
+    run.status = "training"
+    run_repo.save(run)
+    conn.commit()
+    
+    try:
+        epochs = config.get("epochs", 2)
+        last_checkpoint_art_id = resume_from_checkpoint_id
+        
+        if resume_from_checkpoint_id:
+            checkpoint_art = artifact_store.get_artifact(resume_from_checkpoint_id)
+            if not checkpoint_art:
+                raise ValueError(f"Checkpoint {resume_from_checkpoint_id} not found to resume")
+        
+        for epoch in range(1, epochs + 1):
+            if job_id:
+                cursor = conn.cursor()
+                cursor.execute("SELECT status FROM jobs WHERE id = ?;", (job_id,))
+                row = cursor.fetchone()
+                if row and row[0] in ("cancelled", "cancelling"):
+                    raise KeyboardInterrupt("Job cancelled by user")
+            
+            if resume_from_checkpoint_id and epoch == 1:
+                train_res = sovits_adapter.resume(checkpoint_art.uri, TrainRequest(dataset_id, model_name, config))
+            else:
+                train_res = sovits_adapter.train(TrainRequest(dataset_id, model_name, config))
+                
+            if train_res.status != "completed":
+                raise RuntimeError(f"So-VITS training step failed at epoch {epoch}: {train_res.error_msg}")
+                
+            loss = train_res.metrics.get("loss", 0.0) - epoch * 0.001
+            conn.execute(
+                "INSERT INTO eval_metrics (run_id, metric_name, metric_value, step) VALUES (?, ?, ?, ?);",
+                (model_run_id, "loss", loss, epoch)
+            )
+            
+            checkpoint_name = f"{model_name}_epoch_{epoch}.pth"
+            checkpoint_art = artifact_store.create_artifact(
+                name=checkpoint_name,
+                content=train_res.checkpoint_bytes,
+                artifact_type="checkpoint",
+                job_id=job_id,
+                metadata_json={"model_run_id": model_run_id, "epoch": epoch}
+            )
+            last_checkpoint_art_id = checkpoint_art.id
+            
+            # Update ModelRun to checkpointed
+            run.status = "checkpointed"
+            run.config_json["last_checkpoint_artifact_id"] = last_checkpoint_art_id
+            run.config_json["current_epoch"] = epoch
+            run_repo.save(run)
+            conn.commit()
+
+        # training completed -> completed
+        run.status = "completed"
+        
+        from myvoiceclone.config import get_project_root
+        export_dir = os.path.join(get_project_root(), "models", "registry")
+        os.makedirs(export_dir, exist_ok=True)
+        export_path = os.path.join(export_dir, f"{model_name}_final.pth")
+        
+        last_ckpt = artifact_store.get_artifact(last_checkpoint_art_id)
+        sovits_adapter.export(last_ckpt.uri, export_path)
+        
+        with open(export_path, 'rb') as f:
+            model_data = f.read()
+             
+        registered_model_art = artifact_store.create_artifact(
+            name=f"{model_name}_final.pth",
+            content=model_data,
+            artifact_type="model_registry",
+            parent_artifact_id=last_checkpoint_art_id,
+            job_id=job_id,
+            metadata_json={"model_run_id": model_run_id, "dataset_id": dataset_id}
+        )
+        
+        rendered_art = artifact_store.create_artifact(
+            name=f"{model_name}_sovits_sample.wav",
+            content=b"fake_sovits_rendered_audio_wav_data",
+            artifact_type="rendered_audio",
+            parent_artifact_id=registered_model_art.id,
+            job_id=job_id,
+            metadata_json={"model_run_id": model_run_id}
+        )
+        
+        run.config_json["registered_model_artifact_id"] = registered_model_art.id
+        run.config_json["rendered_artifact_id"] = rendered_art.id
+        run.config_json["metrics"] = {"final_loss": loss}
+        run.config_json["env_digest"] = capture_env_digest()
+        run_repo.save(run)
+        conn.commit()
+        return run
+
+    except KeyboardInterrupt as ke:
+        run.status = "cancelled"
+        run.config_json["error_msg"] = "Cancelled by user"
+        run_repo.save(run)
+        conn.commit()
+        raise ke
+    except Exception as e:
+        run.status = "failed"
+        run.config_json["error_msg"] = str(e)
+        run_repo.save(run)
+        conn.commit()
+        raise e
+

@@ -346,3 +346,113 @@ def evaluate_long_train_gate(
     
     return result
 
+
+def generate_train_report(
+    conn: sqlite3.Connection,
+    artifact_store: ArtifactStore,
+    report_id: str,
+    model_run_id: str
+) -> Report:
+    report_repo = ReportRepository(conn)
+    
+    initial_summary = {
+        "status": "draft",
+        "model_run_id": model_run_id
+    }
+    
+    draft_report = Report(
+        id=report_id,
+        name=f"Training Report {report_id}",
+        report_type="train_report",
+        summary_json=initial_summary,
+        artifact_id=None
+    )
+    report_repo.save(draft_report)
+    conn.commit()
+    
+    run_repo = ModelRunRepository(conn)
+    run = run_repo.get_by_id(model_run_id)
+    if not run:
+         raise ValueError(f"Model run {model_run_id} not found")
+         
+    ds_repo = DatasetRepository(conn)
+    ds_name = "N/A"
+    if run.dataset_id:
+         ds = ds_repo.get_by_id(run.dataset_id)
+         if ds:
+              ds_name = ds.name
+              
+    cursor = conn.cursor()
+    cursor.execute("SELECT step, metric_value FROM eval_metrics WHERE run_id = ? AND metric_name = 'loss' ORDER BY step ASC;", (model_run_id,))
+    loss_history = [{"epoch": row[0], "loss": row[1]} for row in cursor.fetchall()]
+    
+    rendered_art_id = run.config_json.get("rendered_artifact_id")
+    rendered_uri = ""
+    if rendered_art_id:
+         art = artifact_store.get_artifact(rendered_art_id)
+         if art:
+              rendered_uri = art.uri
+              
+    last_ckpt_id = run.config_json.get("last_checkpoint_artifact_id")
+    last_ckpt_uri = ""
+    if last_ckpt_id:
+         art = artifact_store.get_artifact(last_ckpt_id)
+         if art:
+              last_ckpt_uri = art.uri
+              
+    env = run.config_json.get("env_digest", {})
+    
+    import os
+    md_content = f"# Training Evaluation Report for Model Run: {run.name}\n\n"
+    md_content += f"- **Run ID**: {model_run_id}\n"
+    md_content += f"- **Dataset**: {ds_name} ({run.dataset_id})\n"
+    md_content += f"- **Status**: {run.status}\n\n"
+    
+    md_content += "## Environment & Configuration\n"
+    md_content += f"- **Python**: {env.get('python_version', 'N/A')}\n"
+    md_content += f"- **Torch**: {env.get('torch_version', 'N/A')}\n"
+    md_content += f"- **CUDA**: {env.get('cuda_version', 'N/A')} (Available: {env.get('cuda_available', False)})\n"
+    md_content += f"- **Git Commit**: {env.get('git_commit', 'N/A')}\n"
+    md_content += f"- **Config**: `{json.dumps(run.config_json.get('config', {}))}`\n\n"
+    
+    if run.status == "completed":
+         md_content += "## Training Success Metrics\n"
+         if loss_history:
+              md_content += "### Loss curve (epoch -> loss):\n"
+              for lh in loss_history:
+                   md_content += f"- Epoch {lh['epoch']}: {lh['loss']:.4f}\n"
+         if last_ckpt_uri:
+              md_content += f"- **Final Checkpoint**: [{last_ckpt_uri}](file://{os.path.join(artifact_store.root_dir, last_ckpt_uri)})\n"
+         if rendered_uri:
+              md_content += f"- **Rendered Sample**: [{rendered_uri}](file://{os.path.join(artifact_store.root_dir, rendered_uri)})\n"
+    elif run.status == "cancelled":
+         md_content += f"## Cancellation Info\n- **Message**: {run.config_json.get('error_msg', 'Cancelled by user')}\n"
+    else:
+         md_content += f"## Failure Info\n- **Error Message**: {run.config_json.get('error_msg', 'Unknown training failure')}\n"
+         if last_ckpt_uri:
+              md_content += f"- **Last Checkpoint preserved**: [{last_ckpt_uri}](file://{os.path.join(artifact_store.root_dir, last_ckpt_uri)})\n"
+              
+    report_bytes = md_content.encode('utf-8')
+    report_filename = f"{report_id}_train_report.md"
+    report_art = artifact_store.create_artifact(
+         name=report_filename,
+         content=report_bytes,
+         artifact_type="report"
+    )
+    
+    final_summary = {
+         "status": "generated",
+         "model_run_id": model_run_id,
+         "run_status": run.status,
+         "loss_history": loss_history,
+         "env_digest": env,
+         "error_msg": run.config_json.get("error_msg")
+    }
+    
+    draft_report.summary_json = final_summary
+    draft_report.artifact_id = report_art.id
+    report_repo.save(draft_report)
+    conn.commit()
+    return draft_report
+
+

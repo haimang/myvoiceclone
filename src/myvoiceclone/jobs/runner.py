@@ -1,6 +1,6 @@
 import sqlite3
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from myvoiceclone.domain.entities import Job
 from myvoiceclone.storage.repositories import JobRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
@@ -13,12 +13,14 @@ from myvoiceclone.pipelines.slice import run_slice
 from myvoiceclone.pipelines.clean import run_clean
 from myvoiceclone.pipelines.transcribe import run_transcribe
 from myvoiceclone.pipelines.score import run_score
+from myvoiceclone.pipelines.train import run_train_sovits
 
 # Adapter imports
 from myvoiceclone.adapters.audio.ffmpeg import FFmpegAdapter
 from myvoiceclone.adapters.diarization.pyannote_adapter import PyannoteAdapter
 from myvoiceclone.adapters.separation.demucs_adapter import DemucsAdapter
 from myvoiceclone.adapters.asr.whisper_adapter import WhisperAdapter
+from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
 
 logger = logging.getLogger("myvoiceclone.jobs.runner")
 
@@ -30,7 +32,8 @@ class JobRunner:
         ffmpeg_adapter: FFmpegAdapter,
         pyannote_adapter: PyannoteAdapter,
         demucs_adapter: DemucsAdapter,
-        whisper_adapter: WhisperAdapter
+        whisper_adapter: WhisperAdapter,
+        sovits_adapter: Optional[SovitsAdapter] = None
     ):
         self.conn = conn
         self.repo = JobRepository(conn)
@@ -39,6 +42,7 @@ class JobRunner:
         self.pyannote_adapter = pyannote_adapter
         self.demucs_adapter = demucs_adapter
         self.whisper_adapter = whisper_adapter
+        self.sovits_adapter = sovits_adapter or SovitsAdapter()
 
     def run(self, job_id: str) -> None:
         job = self.repo.get_by_id(job_id)
@@ -56,6 +60,8 @@ class JobRunner:
                 self._execute_preprocess_all(job)
             elif job.name == "ingest":
                 self._execute_ingest(job)
+            elif job.name == "train_sovits":
+                self._execute_train_sovits(job)
             else:
                 raise ValueError(f"Unsupported job type: {job.name}")
                 
@@ -64,6 +70,14 @@ class JobRunner:
             write_job_event(self.conn, job_id, "complete", "running", "completed", "Job completed successfully")
             self.conn.commit()
             
+        except KeyboardInterrupt as ke:
+            logger.info(f"Job {job_id} cancelled by user")
+            job.status = "cancelled"
+            job.error_msg = "Cancelled by user"
+            self.repo.save(job)
+            write_job_event(self.conn, job_id, "cancel", "running", "cancelled", "Job cancelled by user")
+            self.conn.commit()
+            raise ke
         except Exception as e:
             logger.error(f"Job {job_id} failed: {e}")
             job.status = "failed"
@@ -112,3 +126,27 @@ class JobRunner:
         logger.info("Step 6: Scoring segment quality...")
         min_quality = payload.get("min_quality_score", 0.6)
         run_score(self.conn, rec.id, min_quality_score=min_quality)
+
+    def _execute_train_sovits(self, job: Job):
+        payload = job.payload_json
+        dataset_id = payload.get("dataset_id")
+        model_name = payload.get("model_name")
+        config = payload.get("config", {})
+        model_run_id = payload.get("model_run_id")
+        resume_from = payload.get("resume_from_checkpoint_id")
+        
+        if not dataset_id or not model_name:
+            raise ValueError("Payload missing 'dataset_id' or 'model_name'")
+            
+        run_train_sovits(
+            conn=self.conn,
+            artifact_store=self.artifact_store,
+            sovits_adapter=self.sovits_adapter,
+            dataset_id=dataset_id,
+            model_name=model_name,
+            config=config,
+            model_run_id=model_run_id,
+            resume_from_checkpoint_id=resume_from,
+            job_id=job.id
+        )
+
