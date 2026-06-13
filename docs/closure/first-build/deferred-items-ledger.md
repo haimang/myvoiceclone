@@ -230,3 +230,105 @@ CREATE VIRTUAL TABLE vec_text    USING vec0(embedding float[128] ...);
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | `v0.1` | `2026-06-13` | 初次创建：8 项 deferred from VF-ledger §5.4 |
+
+---
+
+## 4. 第 2 轮 review 追加承接项（2026-06-13）
+
+> 来源：`docs/code-review/first-build/P0-P8-2nd-review-VF-ledger.md §5.3 / §6.4`。
+> 说明：本节仅记录本轮确认真实、必要且不适合在 first-build 内强行完成的后延项；已由本轮修复关闭的 finding 不重复登记。
+
+| ID | VF 来源 | 归属类 | 简要问题 | 触发 reopen 条件 | 目标 build |
+|----|---------|--------|---------|-----------------|-----------|
+| DEF-09 | UF8 | `[partial-delivery]` | vec0 metadata 表已切 `embedding_jobs`，但三类向量真实维度迁移仍未完成 | 接入真实 speaker/audio/text embedder，或创建 migration 008 时 | second-build |
+| DEF-10 | UF14 | `[partial-delivery]` | `live/gpu/slow` marker 已注册但无真实测试用例 | 引入 live adapter、GPU train job 或慢速端到端训练测试时 | second-build |
+| DEF-11 | UF15 | `[partial-delivery]` | `pipeline_runs` 仍未接入生产写路径，recording 级预处理进度未完整推进 | 需要 audit UI、resume UI 或多步 job 可视化时 | second-build |
+| DEF-12 | UF19 | `[true-deferred]` | API 统一 response envelope 与全局错误格式未引入 | 前端/外部 API consumer contract freeze 前 | api-contract-pass |
+| DEF-13 | UF20 | `[true-deferred]` | `domain/policies.py` 仍直接执行 SQL/config 读取，未下沉到 storage/service 层 | security-governance hardening 或权限策略扩展时 | security-hardening |
+| DEF-14 | UF21 | `[partial-delivery]` | CLI eval 与 scoring/adapter 仍含 mock/硬编码指标，真实模型下载脚本仍是占位 | 切换 live training/eval，或需要真实 objective metrics 时 | training-phase |
+| DEF-15 | UF22 | `[true-deferred]` | CLI/API 入口未完全对称，缺 `mvc infer tts` 与 plan §15 路由完全对齐 | API/CLI contract freeze pass 开始时 | api-contract-pass |
+
+### DEF-09 · vec0 真实维度迁移
+
+| 字段 | 值 |
+|------|-----|
+| **VF 来源** | `P0-P8-2nd-review-VF-ledger.md UF8` |
+| **当前状态** | `deferred` |
+
+本轮已将 `Vec0Store` 的 metadata 表从旧 `embedding_items` 切到 migration 007 新建的 `embedding_jobs`。剩余风险是 vec0 虚表仍为 mock-friendly `float[128]`，未按真实模型维度重建。
+
+**reopen 触发器**：接入真实 ECAPA/CLAP/SBERT embedding，或准备 migration 008 时。
+
+**预期修法**：新增 migration 008，按目标维度重建 vec 虚表；为 `Vec0Store` 增加 namespace→dimension 校验；更新 embedding model seed 数据。
+
+### DEF-10 · live/gpu/slow marker 真实测试
+
+| 字段 | 值 |
+|------|-----|
+| **VF 来源** | `UF14` |
+| **当前状态** | `deferred` |
+
+first-build 只要求 marker taxonomy 存在并默认不运行；没有真实 GPU/live adapter 时强造空测试价值低。
+
+**reopen 触发器**：任一 live adapter 或 GPU training path 接入。
+
+### DEF-11 · pipeline_runs 与 recording 级进度
+
+| 字段 | 值 |
+|------|-----|
+| **VF 来源** | `UF15` |
+| **当前状态** | `deferred` |
+
+`pipeline_runs` 表仍未作为生产 workflow ledger 使用，recording 级状态也未随 diarize/slice/clean/transcribe/score 完整推进。
+
+**reopen 触发器**：需要 job resume UI、audit timeline UI、或多 worker 工作流追踪。
+
+### DEF-12 · API 统一 response envelope
+
+| 字段 | 值 |
+|------|-----|
+| **VF 来源** | `UF19` |
+| **当前状态** | `deferred` |
+
+统一 `{status,data,error,meta}` envelope 会改变所有 endpoint 的响应形状，属于 breaking API contract change，不适合在 first-build 修复回归时混入。
+
+**reopen 触发器**：前端或外部 API consumer 开始对接前的 contract freeze pass。
+
+### DEF-13 · policies 分层下沉
+
+| 字段 | 值 |
+|------|-----|
+| **VF 来源** | `UF20` |
+| **当前状态** | `deferred` |
+
+本轮已让 `policy_events` 写入新 canonical 列，但 `domain/policies.py` 仍直接收 `sqlite3.Connection` 并执行 SQL。彻底修复需要增加 storage/service 层边界。
+
+**reopen 触发器**：security-governance hardening 或策略 DSL 扩展。
+
+### DEF-14 · 真实 evaluation / adapter / model download
+
+| 字段 | 值 |
+|------|-----|
+| **VF 来源** | `UF21` |
+| **当前状态** | `deferred` |
+
+CLI eval、scoring 和部分 adapter 仍是 mock/硬编码实现；`download_models.sh` 已修路径但仍不下载真实权重。该项承接既有 DEF-05/DEF-06。
+
+**reopen 触发器**：切换 live training/eval 或需要发布真实 objective metrics。
+
+### DEF-15 · CLI/API contract 对称化
+
+| 字段 | 值 |
+|------|-----|
+| **VF 来源** | `UF22` |
+| **当前状态** | `deferred` |
+
+当前 CLI/API 在 inference、eval、reports、training 参数模型上仍不完全对称，且缺 `mvc infer tts`。补齐会改变公开命令/路由 contract。
+
+**reopen 触发器**：API/CLI contract freeze pass。
+
+## 5. 变更历史追加
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| `v0.2` | `2026-06-13` | 追加第 2 轮 review deferred：DEF-09 至 DEF-15 |
