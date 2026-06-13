@@ -2,6 +2,8 @@ import subprocess
 import json
 import os
 import shutil
+import struct
+import wave
 from typing import Optional
 from myvoiceclone.domain.entities import AudioProbe
 
@@ -53,6 +55,14 @@ class FFmpegAdapter:
             raise FFmpegAdapterError(f"ffmpeg binary not found: {self.ffmpeg_path}")
         if not shutil.which(self.ffprobe_path):
             raise FFmpegAdapterError(f"ffprobe binary not found: {self.ffprobe_path}")
+
+    def _write_silence_wav(self, out_path: str, duration_sec: float, sample_rate: int = 16000) -> None:
+        frame_count = max(1, int(max(duration_sec, 0.001) * sample_rate))
+        with wave.open(out_path, "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(sample_rate)
+            wav.writeframes(struct.pack(f"<{frame_count}h", *([0] * frame_count)))
 
     def probe(self, filepath: str) -> AudioProbe:
         self._check_binaries()
@@ -151,7 +161,8 @@ class FFmpegAdapter:
         self._check_binaries()
         if os.getenv("MOCK_ADAPTERS", "true").lower() == "true":
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            shutil.copy(in_path, out_path)
+            duration = end_sec - start_sec
+            self._write_silence_wav(out_path, duration)
             return
             
         if not os.path.exists(in_path):

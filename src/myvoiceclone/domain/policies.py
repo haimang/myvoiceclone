@@ -122,14 +122,17 @@ def evaluate_release_layers(conn: sqlite3.Connection, model_run_id: str, policy_
     has_mock_metric = any(m.get("metric_source") == "mock" for m in metric_jsons)
     has_quality_metric = any(m.get("quality_gate_eligible") and m.get("metric_source") != "mock" for m in metric_jsons)
     smoke_fail = any(m.get("metric_source") == "smoke_metric" and m.get("smoke_pass") is False for m in metric_jsons)
+    has_metrics = bool(metric_jsons)
 
     smoke_pass = not smoke_fail
-    quality_pass = policy_result["passed"] and (not has_mock_metric or has_quality_metric)
+    quality_pass = policy_result["passed"] and has_metrics and (not has_mock_metric or has_quality_metric)
     blocked_reasons = []
     if not smoke_pass:
         blocked_reasons.append("smoke metrics failed")
     if has_mock_metric and not has_quality_metric:
         blocked_reasons.append("mock metrics are not eligible for real quality pass")
+    if not has_metrics:
+        blocked_reasons.append("no evaluation metrics available for release quality gate")
     if not policy_result["passed"]:
         blocked_reasons.append(policy_result["reason"])
 

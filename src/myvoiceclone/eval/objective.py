@@ -63,6 +63,10 @@ def evaluate_objective_metrics(
         conn.commit()
         return degraded_result
 
+    input_refs = art.metadata_json.get("input_refs", {}) if art.metadata_json else {}
+    input_artifact_id = input_refs.get("source_artifact_id") or art.source_artifact_id or art.parent_artifact_id
+    reference_artifact_id = input_refs.get("reference_artifact_id") or art.parent_artifact_id
+
     # Compute mock metrics (Objective Evaluation)
     metrics = {
         "speaker_similarity": 0.84,
@@ -91,16 +95,20 @@ def evaluate_objective_metrics(
     sample_id = f"sample_{run_id}_{uuid_hex()}"
     conn.execute(
         """
-        INSERT INTO eval_samples (id, run_id, prompt, audio_artifact_id, input_artifact_id, output_artifact_id, scores_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO eval_samples (
+            id, run_id, prompt, audio_artifact_id, input_artifact_id,
+            output_artifact_id, reference_artifact_id, scores_json
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         """,
         (
             sample_id,
             run_id,
             "Standard evaluation prompt text",
             rendered_art_id,
+            input_artifact_id,
             rendered_art_id,
-            rendered_art_id,
+            reference_artifact_id,
             json.dumps(metric_meta),
         )
     )

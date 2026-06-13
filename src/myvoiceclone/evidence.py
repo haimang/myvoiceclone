@@ -9,11 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from myvoiceclone.config import resolve_artifact_root, resolve_db_path
+from myvoiceclone.config import resolve_artifact_root, resolve_db_path, resolve_models_dir
 from myvoiceclone.storage.repositories import json_to_dict
 
 
-DEFAULT_EVIDENCE_ROOT = Path("/mnt/usb/workspace/myvoiceresearch/test-runs")
+DEFAULT_EVIDENCE_ROOT = Path(os.getenv("EVIDENCE_ROOT", "/app/test-runs"))
 REQUIRED_EVIDENCE_FILES = [
     "manifest.json",
     "env.json",
@@ -83,7 +83,7 @@ def _db_summary(db_path: Path) -> Dict[str, Any]:
             "datasets",
             "model_runs",
             "eval_metrics",
-            "eval_reports",
+            "reports",
             "release_gates",
             "policy_events",
         ]:
@@ -143,8 +143,8 @@ def _trace_summary(db_path: Path, trace: Optional[Dict[str, Any]] = None) -> Dic
             for event in events:
                 event["metadata_json"] = json_to_dict(event.get("metadata_json"))
             payload["job_events"] = events
-        if "reports" not in payload and _table_exists(conn, "eval_reports"):
-            reports = _safe_query(conn, "SELECT * FROM eval_reports ORDER BY created_at, id;")
+        if "reports" not in payload and _table_exists(conn, "reports"):
+            reports = _safe_query(conn, "SELECT * FROM reports ORDER BY created_at, id;")
             for report in reports:
                 report["summary_json"] = json_to_dict(report.get("summary_json"))
             payload["reports"] = reports
@@ -182,6 +182,7 @@ def collect_evidence_pack(
 
     db = Path(db_path or resolve_db_path()).expanduser()
     artifacts = Path(artifact_root or resolve_artifact_root()).expanduser()
+    models_dir = Path(resolve_models_dir()).expanduser()
     skipped = bool(skip_reason)
     command_entries = commands or []
     timestamp = utc_now()
@@ -215,6 +216,12 @@ def collect_evidence_pack(
                 "FIRST_TEST_AUDIO_PATH",
             ]
             if os.getenv(key) is not None
+        },
+        "resolved": {
+            "DB_PATH": str(db),
+            "ARTIFACT_ROOT": str(artifacts),
+            "MODELS_DIR": str(models_dir),
+            "EVIDENCE_ROOT": str(Path(output_root or DEFAULT_EVIDENCE_ROOT).expanduser()),
         },
     }
     skips = {"skipped": skipped, "reason": skip_reason, "denominator": manifest["skip_denominator"]}
