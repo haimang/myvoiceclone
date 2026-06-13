@@ -63,9 +63,9 @@ def check_release_policy(conn: sqlite3.Connection, model_run_id: str) -> Dict[st
 
     unauthorized_speakers = []
     for spk in speakers:
-        cursor.execute("SELECT granted FROM consent_ledger WHERE speaker_id = ?;", (spk,))
+        cursor.execute("SELECT granted, status FROM consent_ledger WHERE speaker_id = ?;", (spk,))
         consent_rows = cursor.fetchall()
-        has_consent = any(r["granted"] == 1 for r in consent_rows)
+        has_consent = any(r["granted"] == 1 and (r["status"] in (None, "active")) for r in consent_rows)
         if not has_consent:
             unauthorized_speakers.append(spk)
 
@@ -78,8 +78,11 @@ def check_release_policy(conn: sqlite3.Connection, model_run_id: str) -> Dict[st
             "reason": reason
         })
         conn.execute(
-            "INSERT INTO policy_events (event_type, status, details_json) VALUES (?, ?, ?);",
-            ("consent_check", "failed", details_json)
+            """
+            INSERT INTO policy_events (event_type, status, details_json, subject_type, subject_id, policy_name, decision, reason, payload_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """,
+            ("consent_check", "failed", details_json, "model_run", model_run_id, "consent_check", "failed", reason, details_json)
         )
         return {
             "passed": False,
@@ -93,8 +96,11 @@ def check_release_policy(conn: sqlite3.Connection, model_run_id: str) -> Dict[st
         "speakers": speakers
     })
     conn.execute(
-        "INSERT INTO policy_events (event_type, status, details_json) VALUES (?, ?, ?);",
-        ("consent_check", "passed", details_json)
+        """
+        INSERT INTO policy_events (event_type, status, details_json, subject_type, subject_id, policy_name, decision, reason, payload_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """,
+        ("consent_check", "passed", details_json, "model_run", model_run_id, "consent_check", "passed", "All speakers have granted consent.", details_json)
     )
     return {
         "passed": True,

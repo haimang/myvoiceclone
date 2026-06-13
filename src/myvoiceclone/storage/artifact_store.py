@@ -48,10 +48,17 @@ class ArtifactStore:
         # Save to DB
         self.conn.execute(
             """
-            INSERT INTO artifacts (id, name, uri, sha256, bytes, artifact_type, parent_artifact_id, job_id, metadata_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            INSERT INTO artifacts (
+                id, name, uri, sha256, bytes, artifact_type, kind,
+                parent_artifact_id, source_artifact_id, job_id, created_by_job_id, metadata_json, params_json
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """,
-            (artifact_id, name, rel_uri, sha256, size_bytes, artifact_type, parent_artifact_id, job_id, dict_to_json(metadata))
+            (
+                artifact_id, name, rel_uri, sha256, size_bytes, artifact_type, artifact_type,
+                parent_artifact_id, parent_artifact_id, job_id, job_id,
+                dict_to_json(metadata), dict_to_json({}),
+            )
         )
         
         return Artifact(
@@ -63,7 +70,10 @@ class ArtifactStore:
             artifact_type=artifact_type,
             parent_artifact_id=parent_artifact_id,
             job_id=job_id,
-            metadata_json=metadata
+            metadata_json=metadata,
+            kind=artifact_type,
+            source_artifact_id=parent_artifact_id,
+            created_by_job_id=job_id,
         )
 
     def get_artifact(self, artifact_id: str) -> Optional[Artifact]:
@@ -82,7 +92,12 @@ class ArtifactStore:
             parent_artifact_id=row["parent_artifact_id"],
             job_id=row["job_id"],
             metadata_json=json_to_dict(row["metadata_json"]),
-            created_at=parse_datetime(row["created_at"])
+            created_at=parse_datetime(row["created_at"]),
+            kind=row["kind"],
+            source_artifact_id=row["source_artifact_id"],
+            created_by_job_id=row["created_by_job_id"],
+            pipeline_version=row["pipeline_version"],
+            params_json=json_to_dict(row["params_json"]),
         )
 
     def get_absolute_path(self, artifact: Artifact) -> str:

@@ -47,7 +47,10 @@ class SegmentStatus(str, Enum):
     NEEDS_REVIEW = "needs_review"
     KEEP = "keep"
     DROP = "drop"
+    FIXED = "fixed"
     DUPLICATE = "duplicate"
+    CLEAN_FAILED = "clean_failed"
+    TRANSCRIBE_FAILED = "transcribe_failed"
     # curate pipeline
     CURATED = "curated"
 

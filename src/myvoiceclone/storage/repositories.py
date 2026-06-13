@@ -303,17 +303,34 @@ class JobRepository:
         self.conn = conn
 
     def save(self, job: Job):
+        params_json = job.params_json or job.payload_json
         self.conn.execute(
             """
-            INSERT INTO jobs (id, name, status, payload_json, error_msg, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO jobs (
+                id, name, status, payload_json, params_json, subject_type, subject_id,
+                pipeline, requested_by, started_at, finished_at, error_msg, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(id) DO UPDATE SET
                 status=excluded.status,
                 payload_json=excluded.payload_json,
+                params_json=excluded.params_json,
+                subject_type=excluded.subject_type,
+                subject_id=excluded.subject_id,
+                pipeline=excluded.pipeline,
+                requested_by=excluded.requested_by,
+                started_at=excluded.started_at,
+                finished_at=excluded.finished_at,
                 error_msg=excluded.error_msg,
                 updated_at=CURRENT_TIMESTAMP;
             """,
-            (job.id, job.name, job.status, dict_to_json(job.payload_json), job.error_msg)
+            (
+                job.id, job.name, job.status, dict_to_json(job.payload_json), dict_to_json(params_json),
+                job.subject_type, job.subject_id, job.pipeline, job.requested_by,
+                job.started_at.isoformat() if job.started_at else None,
+                job.finished_at.isoformat() if job.finished_at else None,
+                job.error_msg,
+            )
         )
 
     def add_event(self, job_id: str, event_type: str, status_from: Optional[str], status_to: Optional[str], message: Optional[str]):
@@ -327,7 +344,14 @@ class JobRepository:
 
     def get_by_id(self, id: str) -> Optional[Job]:
         cursor = self.conn.cursor()
-        cursor.execute("SELECT id, name, status, payload_json, error_msg, created_at, updated_at FROM jobs WHERE id = ?;", (id,))
+        cursor.execute(
+            """
+            SELECT id, name, type, status, payload_json, params_json, subject_type, subject_id,
+                   pipeline, requested_by, started_at, finished_at, error_msg, created_at, updated_at
+            FROM jobs WHERE id = ?;
+            """,
+            (id,)
+        )
         row = cursor.fetchone()
         if not row:
             return None
@@ -336,6 +360,14 @@ class JobRepository:
             name=row["name"],
             status=row["status"],
             payload_json=json_to_dict(row["payload_json"]),
+            type=row["type"],
+            params_json=json_to_dict(row["params_json"]),
+            subject_type=row["subject_type"],
+            subject_id=row["subject_id"],
+            pipeline=row["pipeline"],
+            requested_by=row["requested_by"],
+            started_at=parse_datetime(row["started_at"]),
+            finished_at=parse_datetime(row["finished_at"]),
             error_msg=row["error_msg"],
             created_at=parse_datetime(row["created_at"]),
             updated_at=parse_datetime(row["updated_at"])
@@ -343,13 +375,27 @@ class JobRepository:
 
     def list_all(self) -> List[Job]:
         cursor = self.conn.cursor()
-        cursor.execute("SELECT id, name, status, payload_json, error_msg, created_at, updated_at FROM jobs ORDER BY created_at DESC;")
+        cursor.execute(
+            """
+            SELECT id, name, type, status, payload_json, params_json, subject_type, subject_id,
+                   pipeline, requested_by, started_at, finished_at, error_msg, created_at, updated_at
+            FROM jobs ORDER BY created_at DESC;
+            """
+        )
         return [
             Job(
                 id=row["id"],
                 name=row["name"],
                 status=row["status"],
                 payload_json=json_to_dict(row["payload_json"]),
+                type=row["type"],
+                params_json=json_to_dict(row["params_json"]),
+                subject_type=row["subject_type"],
+                subject_id=row["subject_id"],
+                pipeline=row["pipeline"],
+                requested_by=row["requested_by"],
+                started_at=parse_datetime(row["started_at"]),
+                finished_at=parse_datetime(row["finished_at"]),
                 error_msg=row["error_msg"],
                 created_at=parse_datetime(row["created_at"]),
                 updated_at=parse_datetime(row["updated_at"])
@@ -378,20 +424,44 @@ class ModelRunRepository:
         self.conn = conn
 
     def save(self, run: ModelRun):
+        env_digest_json = dict_to_json(run.env_digest)
         self.conn.execute(
             """
-            INSERT INTO model_runs (id, name, dataset_id, status, config_json)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO model_runs (
+                id, name, model_family, dataset_id, status, config_json,
+                checkpoint_artifact_id, env_digest, git_commit, finished_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
+                name=excluded.name,
+                model_family=excluded.model_family,
+                dataset_id=excluded.dataset_id,
                 status=excluded.status,
-                config_json=excluded.config_json;
+                config_json=excluded.config_json,
+                checkpoint_artifact_id=excluded.checkpoint_artifact_id,
+                env_digest=excluded.env_digest,
+                git_commit=excluded.git_commit,
+                finished_at=excluded.finished_at,
+                updated_at=CURRENT_TIMESTAMP;
             """,
-            (run.id, run.name, run.dataset_id, run.status, dict_to_json(run.config_json))
+            (
+                run.id, run.name, run.model_family, run.dataset_id, run.status,
+                dict_to_json(run.config_json), run.checkpoint_artifact_id,
+                env_digest_json, run.git_commit,
+                run.finished_at.isoformat() if run.finished_at else None,
+            )
         )
 
     def get_by_id(self, id: str) -> Optional[ModelRun]:
         cursor = self.conn.cursor()
-        cursor.execute("SELECT id, name, dataset_id, status, config_json, created_at FROM model_runs WHERE id = ?;", (id,))
+        cursor.execute(
+            """
+            SELECT id, name, model_family, dataset_id, status, config_json,
+                   checkpoint_artifact_id, env_digest, git_commit, created_at, updated_at, finished_at
+            FROM model_runs WHERE id = ?;
+            """,
+            (id,)
+        )
         row = cursor.fetchone()
         if not row:
             return None
@@ -401,7 +471,13 @@ class ModelRunRepository:
             dataset_id=row["dataset_id"],
             status=row["status"],
             config_json=json_to_dict(row["config_json"]),
-            created_at=parse_datetime(row["created_at"])
+            created_at=parse_datetime(row["created_at"]),
+            model_family=row["model_family"],
+            checkpoint_artifact_id=row["checkpoint_artifact_id"],
+            env_digest=json_to_dict(row["env_digest"]),
+            git_commit=row["git_commit"],
+            updated_at=parse_datetime(row["updated_at"]),
+            finished_at=parse_datetime(row["finished_at"]),
         )
 
 class ReportRepository:
@@ -409,22 +485,37 @@ class ReportRepository:
         self.conn = conn
 
     def save(self, rpt: Report):
+        kind = rpt.kind or rpt.report_type
+        status = rpt.status or rpt.summary_json.get("status") or "pending"
         self.conn.execute(
             """
-            INSERT INTO reports (id, name, report_type, summary_json, artifact_id)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO reports (id, name, report_type, kind, subject_type, subject_id, status, summary_json, artifact_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name=excluded.name,
                 report_type=excluded.report_type,
+                kind=excluded.kind,
+                subject_type=excluded.subject_type,
+                subject_id=excluded.subject_id,
+                status=excluded.status,
                 summary_json=excluded.summary_json,
                 artifact_id=excluded.artifact_id;
             """,
-            (rpt.id, rpt.name, rpt.report_type, dict_to_json(rpt.summary_json), rpt.artifact_id)
+            (
+                rpt.id, rpt.name, rpt.report_type, kind, rpt.subject_type, rpt.subject_id,
+                status, dict_to_json(rpt.summary_json), rpt.artifact_id,
+            )
         )
 
     def get_by_id(self, id: str) -> Optional[Report]:
         cursor = self.conn.cursor()
-        cursor.execute("SELECT id, name, report_type, summary_json, artifact_id, created_at FROM reports WHERE id = ?;", (id,))
+        cursor.execute(
+            """
+            SELECT id, name, report_type, kind, subject_type, subject_id, status, summary_json, artifact_id, created_at
+            FROM reports WHERE id = ?;
+            """,
+            (id,)
+        )
         row = cursor.fetchone()
         if not row:
             return None
@@ -434,12 +525,21 @@ class ReportRepository:
             report_type=row["report_type"],
             summary_json=json_to_dict(row["summary_json"]),
             artifact_id=row["artifact_id"],
-            created_at=parse_datetime(row["created_at"])
+            created_at=parse_datetime(row["created_at"]),
+            kind=row["kind"],
+            subject_type=row["subject_type"],
+            subject_id=row["subject_id"],
+            status=row["status"],
         )
 
     def list_all(self) -> List[Report]:
         cursor = self.conn.cursor()
-        cursor.execute("SELECT id, name, report_type, summary_json, artifact_id, created_at FROM reports ORDER BY created_at DESC;")
+        cursor.execute(
+            """
+            SELECT id, name, report_type, kind, subject_type, subject_id, status, summary_json, artifact_id, created_at
+            FROM reports ORDER BY created_at DESC;
+            """
+        )
         return [
             Report(
                 id=row["id"],
@@ -447,7 +547,11 @@ class ReportRepository:
                 report_type=row["report_type"],
                 summary_json=json_to_dict(row["summary_json"]),
                 artifact_id=row["artifact_id"],
-                created_at=parse_datetime(row["created_at"])
+                created_at=parse_datetime(row["created_at"]),
+                kind=row["kind"],
+                subject_type=row["subject_type"],
+                subject_id=row["subject_id"],
+                status=row["status"],
             )
             for row in cursor.fetchall()
         ]

@@ -11,7 +11,7 @@ class Vec0Store:
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            SELECT id FROM embedding_items 
+            SELECT id FROM embedding_jobs
             WHERE namespace = ? AND item_id = ? AND model_id = ?;
             """,
             (namespace, item_id, model_id)
@@ -22,8 +22,8 @@ class Vec0Store:
             
         cursor.execute(
             """
-            INSERT INTO embedding_items (namespace, item_id, model_id)
-            VALUES (?, ?, ?);
+            INSERT INTO embedding_jobs (namespace, item_id, model_id, status)
+            VALUES (?, ?, ?, 'completed');
             """,
             (namespace, item_id, model_id)
         )
@@ -67,7 +67,7 @@ class Vec0Store:
             
             # Map rowid back to item_id
             cursor2 = self.conn.cursor()
-            cursor2.execute("SELECT item_id FROM embedding_items WHERE id = ?;", (rowid,))
+            cursor2.execute("SELECT item_id FROM embedding_jobs WHERE id = ?;", (rowid,))
             item_row = cursor2.fetchone()
             if item_row:
                 results.append({
@@ -82,7 +82,7 @@ class Vec0Store:
             
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT id FROM embedding_items WHERE namespace = ? AND item_id = ?;",
+            "SELECT id FROM embedding_jobs WHERE namespace = ? AND item_id = ?;",
             (namespace, item_id)
         )
         rows = cursor.fetchall()
@@ -91,6 +91,6 @@ class Vec0Store:
             self.conn.execute(f"DELETE FROM vec_{namespace} WHERE rowid = ?;", (db_id,))
             
         self.conn.execute(
-            "DELETE FROM embedding_items WHERE namespace = ? AND item_id = ?;",
+            "DELETE FROM embedding_jobs WHERE namespace = ? AND item_id = ?;",
             (namespace, item_id)
         )

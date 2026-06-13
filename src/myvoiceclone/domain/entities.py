@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 
 # ─────────────────────────────────────────────
@@ -13,6 +13,7 @@ class AudioProbe:
     duration_sec: float
     sample_rate: int
     channels: int
+    format: str = ""
 
 
 @dataclass
@@ -79,6 +80,14 @@ class Job:
     error_msg: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    type: Optional[str] = None
+    params_json: Dict[str, Any] = field(default_factory=dict)
+    subject_type: Optional[str] = None
+    subject_id: Optional[str] = None
+    pipeline: Optional[str] = None
+    requested_by: Optional[str] = None
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
 
 @dataclass
 class JobEvent:
@@ -102,6 +111,11 @@ class Artifact:
     job_id: Optional[str] = None
     metadata_json: Dict[str, Any] = field(default_factory=dict)
     created_at: Optional[datetime] = None
+    kind: Optional[str] = None
+    source_artifact_id: Optional[str] = None
+    created_by_job_id: Optional[str] = None
+    pipeline_version: Optional[str] = None
+    params_json: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ModelRun:
@@ -111,6 +125,12 @@ class ModelRun:
     status: str
     config_json: Dict[str, Any] = field(default_factory=dict)
     created_at: Optional[datetime] = None
+    model_family: Optional[str] = None
+    checkpoint_artifact_id: Optional[str] = None
+    env_digest: Dict[str, Any] = field(default_factory=dict)
+    git_commit: Optional[str] = None
+    updated_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
 
 @dataclass
 class Report:
@@ -120,13 +140,10 @@ class Report:
     summary_json: Dict[str, Any] = field(default_factory=dict)
     artifact_id: Optional[str] = None
     created_at: Optional[datetime] = None
-
-@dataclass
-class AudioProbe:
-    duration_sec: float
-    sample_rate: int
-    channels: int
-    format: str
+    kind: Optional[str] = None
+    subject_type: Optional[str] = None
+    subject_id: Optional[str] = None
+    status: Optional[str] = None
 
 @dataclass
 class DiarizationTurn:
@@ -140,6 +157,20 @@ class TranscriptSegment:
     end_sec: float
     text: str
     confidence: float
+
+
+@dataclass
+class TranscriptResult:
+    text: str
+    language: str
+    segments: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class EmbeddingResult:
+    embedding: List[float]
+    model_id: str
+    dimension: int
 
 @dataclass
 class SeparationResult:
@@ -191,3 +222,7 @@ class ConvertResult:
     duration_sec: float
     error_msg: Optional[str] = None
 
+
+@dataclass
+class AudioConvertResult(ConvertResult):
+    pass
