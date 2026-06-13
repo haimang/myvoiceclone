@@ -25,14 +25,14 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| FT1 preflight | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `docs/closure/first-test/FT1-preflight-closure.md` + `2026-06-13 08:26 UTC` |
-| FT2 schema observability | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `docs/closure/first-test/FT2-schema-observability-closure.md` + `2026-06-13 08:32 UTC` |
-| FT3 real preprocess contract | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `docs/closure/first-test/FT3-real-preprocess-closure.md` + `2026-06-13 08:35 UTC` |
-| FT4 real inference substrate | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `docs/closure/first-test/FT4-real-inference-closure.md` + `2026-06-13 08:38 UTC` |
-| FT5 real evaluation gate | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `docs/closure/first-test/FT5-real-evaluation-closure.md` + `2026-06-13 08:41 UTC` |
-| FT6 FastAPI e2e surface | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `docs/closure/first-test/FT6-fastapi-e2e-closure.md` + `2026-06-13 08:47 UTC` |
-| FT7 live capstone evidence | ⏸ pending-live | `uncommitted working tree on HEAD 31b4a04` + `/mnt/usb/workspace/myvoiceresearch/test-runs/first-test-capstone-skipped-20260613T0850Z` + `2026-06-13 08:53 UTC` |
-| FT8 closure/deferred reconciliation | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/test_first_test_closure_docs.py` + `2026-06-13 08:57 UTC` |
+| FT1 preflight | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/FT1-preflight-closure.md` + `2026-06-13 08:26 UTC` |
+| FT2 schema observability | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/FT2-schema-observability-closure.md` + `2026-06-13 08:32 UTC` |
+| FT3 real preprocess contract | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/FT3-real-preprocess-closure.md` + `2026-06-13 08:35 UTC` |
+| FT4 real inference substrate | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/FT4-real-inference-closure.md` + `2026-06-13 08:38 UTC` |
+| FT5 real evaluation gate | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/FT5-real-evaluation-closure.md` + `2026-06-13 08:41 UTC` |
+| FT6 FastAPI e2e surface | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/FT6-fastapi-e2e-closure.md` + `2026-06-13 08:47 UTC` |
+| FT7 live capstone evidence | ⏸ pending-live | `uncommitted working tree on HEAD 952fbc5` + `/mnt/usb/workspace/myvoiceresearch/test-runs/first-test-capstone-skipped-20260613T0850Z` + `2026-06-13 08:53 UTC` |
+| FT8 closure/deferred reconciliation | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/test_first_test_closure_docs.py` + `2026-06-13 08:57 UTC` |
 
 ## 2. Evidence / Validation 矩阵
 
@@ -43,7 +43,7 @@
 | FT7 live capstone marker | `./venv/bin/python -m pytest tests/integration/test_first_test_capstone.py -m live -q -rs` | `1 skipped, 1 deselected` | live gating discipline |
 | FT8 docs/check | `./venv/bin/python -m pytest tests/unit/test_first_test_closure_docs.py -q` | `5 passed` | closure/deferred/final pack integrity |
 | Final cross-phase review | `git diff --check`; `./venv/bin/python -m pytest -q`; `./venv/bin/python -m pytest tests/integration/test_first_test_http_smoke.py tests/integration/test_first_test_capstone.py -m live -q -rs`; `./venv/bin/python -m myvoiceclone.evidence validate /mnt/usb/workspace/myvoiceresearch/test-runs/first-test-capstone-skipped-20260613T0850Z --repo-root .`; `./venv/bin/python -m compileall -q src tests` | diff check pass; `148 passed, 1 skipped, 2 deselected, 14 warnings`; live `2 skipped, 1 deselected`; validator `ok=true`; compileall pass | FT1-FT8 + review-R1 fixes final review |
-| Evidence pack refresh | `SKIP_REASON='RUN_FIRST_TEST_CAPSTONE=1 is required for live first-test capstone' RUN_ID='first-test-capstone-skipped-20260613T0850Z' ./scripts/collect_first_test_evidence.sh` | validator `ok=true`; `env.json` git_commit `31b4a04` | closure anchor correction |
+| Evidence pack refresh | `SKIP_REASON='RUN_FIRST_TEST_CAPSTONE=1 is required for live first-test capstone' RUN_ID='first-test-capstone-skipped-20260613T0850Z' ./scripts/collect_first_test_evidence.sh` | validator `ok=true`; `env.json` git_commit `952fbc5` | closure anchor correction |
 
 ## 3. Hard-gate 判定
 
@@ -69,7 +69,7 @@
 | 收口纪律 | 兑现声明 |
 |----------|----------|
 | 每个 ✅ 归类 5 态（verified / observed-OK-at-closure / partial / 未观察 / deferred）| ✅ FT1-FT6/FT8 are `observed-OK-at-closure`; FT7 live is `pending-live/deferred` |
-| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 31b4a04`，本轮未请求 commit |
+| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 952fbc5`，本轮未请求 commit |
 | scope diff 守卫（`git diff --stat` 与 in-scope 一致，无越界修改）| ✅ 改动集中在 FT1-FT8 action-plan 对应 code/tests/docs |
 | deferred 已三分类（A/B/C）且每项有承接位置 | ✅ |
 | owner-test 项未经 owner 复测的标 ⏸ PENDING（无「我修了」式宣称）| ✅ live capstone 标 pending-live |

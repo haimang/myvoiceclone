@@ -121,3 +121,22 @@
 | FTD-15 | B | retained | DB schema 与 first-build final plan canonical 列名/索引仍有兼容层漂移 | schema contract freeze 或 second-build migration pass | schema-hardening |
 | FTD-16 | B | retained | `pipeline_runs` 仍未作为生产 workflow ledger 写入 | audit/resume UI 或多 job workflow timeline 成为目标 | workflow-ledger |
 | FTD-17 | A | retained | SoVITS/RVC 真实训练仍未消费 frozen dataset manifest | first-test 之后要求真实训练，而非真实推理闭环 | training-phase |
+
+---
+
+## 4. Review-R2 追加承接项（2026-06-13）
+
+> 来源：`docs/code-review/first-test/FT1-FT8-2nd-review-VF-ledger.md`。本节只记录第2轮核验后仍真实存在、但不适合在 first-test second-pass 内强行完成的剩余项。
+
+| ID | 类型 | 状态 | 简要问题 | 触发器 | 目标阶段 |
+|----|------|------|----------|--------|----------|
+| FTD-18 | B | partial-fixed | `score.py` 已禁止 real mode 静默 mock，但 segment scoring artifact 尚未落表 | 真实 scorer 接入或质量报告要求逐段评分 artifact | evaluation-hardening |
+| FTD-19 | B | retained | adapter version/device/cache 元数据仍有静态或 unknown 字段 | adapter live smoke 覆盖 PyAnnote/Demucs/Whisper/XTTS/RVC 全链路 | adapter-observability |
+| FTD-20 | B | retained | `source_artifact_id` 与 `parent_artifact_id` 语义仍默认折叠 | lineage schema freeze，要求区分 derivation parent 与 original source | schema-hardening |
+| FTD-21 | B | retained | `embedding_items` 兼容表未从迁移中移除 | 允许 breaking migration 或完成 vec0 数据迁移验收 | schema-cleanup |
+| FTD-22 | B | retained | `/api/runs` 缺 list/pagination，`RunStatusResponse` 仍使用泛型 dict list | API consumer 或前端状态页进入 contract freeze | api-contract-pass |
+| FTD-23 | B | partial-fixed | API 已有结构化错误 envelope，但 route-level HTTP code/错误码语义仍未全面归一 | 外部 API contract freeze 或错误码目录升级为稳定版本 | api-contract-pass |
+| FTD-24 | C | retained | report/gate ID 仍由调用方传入，未实现服务端 idempotency key | 多客户端并发创建 report/gate 或审计要求稳定去重 | api-ergonomics |
+| FTD-25 | A | retained | Dockerfile.api、API production compose 与真实容器命令未完成 | 需要容器化 API 服务而非 CLI worker first-test | container-productionization |
+| FTD-26 | B | retained | FT7 pre-capstone gate 仍以 closure/evidence shape 为主，未内嵌完整测试命令 gate | owner 要求 live gate 自动执行 FT1-FT6 required test matrix | live-gate-harness |
+| FTD-27 | C | retained | `recordings.updated_at`、状态 CHECK、job canonical spelling 与 cleanup hardening 未整体收敛 | schema v2 或 platform hardening 进入目标 | schema-platform-hardening |

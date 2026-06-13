@@ -21,13 +21,13 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| FT2-P1-01 schema drift inventory | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/storage/test_schema_drift.py` + `2026-06-13 08:31 UTC` |
-| FT2-P1-02 SQLite pragma boundary | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/storage/test_sqlite_connection.py` + `2026-06-13 08:31 UTC` |
-| FT2-P2-01 step-level job_events | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/jobs/test_runner.py` + `2026-06-13 08:31 UTC` |
-| FT2-P2-02 failure summary 上卷 | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/jobs/test_runner.py::test_job_runner_success_preprocess` + `2026-06-13 08:31 UTC` |
-| FT2-P2-03 adapter metadata contract | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/storage/test_artifact_observability.py` + `2026-06-13 08:31 UTC` |
-| FT2-P3-01 audit trace completeness | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/api/test_audit_trace.py` + `2026-06-13 08:31 UTC` |
-| FT2-P3-02 mock/real evidence separation | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/eval/test_objective.py` + `2026-06-13 08:31 UTC` |
+| FT2-P1-01 schema drift inventory | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/storage/test_schema_drift.py` + `2026-06-13 08:31 UTC` |
+| FT2-P1-02 SQLite pragma boundary | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/storage/test_sqlite_connection.py` + `2026-06-13 08:31 UTC` |
+| FT2-P2-01 step-level job_events | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/jobs/test_runner.py` + `2026-06-13 08:31 UTC` |
+| FT2-P2-02 failure summary 上卷 | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/jobs/test_runner.py::test_job_runner_success_preprocess` + `2026-06-13 08:31 UTC` |
+| FT2-P2-03 adapter metadata contract | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/storage/test_artifact_observability.py` + `2026-06-13 08:31 UTC` |
+| FT2-P3-01 audit trace completeness | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_audit_trace.py` + `2026-06-13 08:31 UTC` |
+| FT2-P3-02 mock/real evidence separation | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/eval/test_objective.py` + `2026-06-13 08:31 UTC` |
 
 ## 2. Evidence / Validation 矩阵
 
@@ -60,7 +60,7 @@
 | 收口纪律 | 兑现声明 |
 |----------|----------|
 | 每个 ✅ 归类 5 态（verified / observed-OK-at-closure / partial / 未观察 / deferred）| ✅ `observed-OK-at-closure`，短途测试已通过；未宣称 live |
-| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 31b4a04`，本轮未请求 commit |
+| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 952fbc5`，本轮未请求 commit |
 | scope diff 守卫（`git diff --stat` 与 in-scope 一致，无越界修改）| ✅ 改动限 FT2 AP 指定 schema/event/trace/eval/tests |
 | deferred 已三分类（A/B/C）且每项有承接位置 | ✅ |
 | owner-test 项未经 owner 复测的标 ⏸ PENDING（无「我修了」式宣称）| N/A |

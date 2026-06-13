@@ -21,12 +21,12 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| FT7-P1-01 marker taxonomy and denominator | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/test_pytest_markers.py` + `2026-06-13 08:53 UTC` |
-| FT7-P1-02 FT1-FT6 required test gate | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/integration/test_first_test_capstone.py::test_first_test_capstone_requires_ft1_ft6_closures` + `2026-06-13 08:53 UTC` |
-| FT7-P2-01 evidence exporter | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/test_first_test_evidence_validator.py::test_evidence_exporter_writes_required_files` + `2026-06-13 08:53 UTC` |
-| FT7-P2-02 evidence validator | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `tests/unit/test_first_test_evidence_validator.py` + `2026-06-13 08:53 UTC` |
-| FT7-P3-01 API capstone live chain | ⏸ pending | `uncommitted working tree on HEAD 31b4a04` + `tests/integration/test_first_test_capstone.py -m live -q -rs` -> `1 skipped: RUN_FIRST_TEST_CAPSTONE=1 is required...` + `2026-06-13 08:53 UTC` |
-| FT7-P3-02 capstone trace/evidence indexing | ✅ closed | `uncommitted working tree on HEAD 31b4a04` + `/mnt/usb/workspace/myvoiceresearch/test-runs/first-test-capstone-skipped-20260613T0850Z/manifest.json` + `2026-06-13 08:53 UTC` |
+| FT7-P1-01 marker taxonomy and denominator | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/test_pytest_markers.py` + `2026-06-13 08:53 UTC` |
+| FT7-P1-02 FT1-FT6 required test gate | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/integration/test_first_test_capstone.py::test_first_test_capstone_requires_ft1_ft6_closures` + `2026-06-13 08:53 UTC` |
+| FT7-P2-01 evidence exporter | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/test_first_test_evidence_validator.py::test_evidence_exporter_writes_required_files` + `2026-06-13 08:53 UTC` |
+| FT7-P2-02 evidence validator | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/test_first_test_evidence_validator.py` + `2026-06-13 08:53 UTC` |
+| FT7-P3-01 API capstone live chain | ⏸ pending | `uncommitted working tree on HEAD 952fbc5` + `tests/integration/test_first_test_capstone.py -m live -q -rs` -> `1 skipped: RUN_FIRST_TEST_CAPSTONE=1 is required...` + `2026-06-13 08:53 UTC` |
+| FT7-P3-02 capstone trace/evidence indexing | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `/mnt/usb/workspace/myvoiceresearch/test-runs/first-test-capstone-skipped-20260613T0850Z/manifest.json` + `2026-06-13 08:53 UTC` |
 
 ## 2. Evidence / Validation 矩阵
 
@@ -62,7 +62,7 @@
 | 收口纪律 | 兑现声明 |
 |----------|----------|
 | 每个 ✅ 归类 5 态（verified / observed-OK-at-closure / partial / 未观察 / deferred）| ✅ `observed-OK-at-closure` for marker/exporter/validator/gate；live capstone is `deferred/pending` |
-| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 31b4a04`，本轮未请求 commit |
+| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 952fbc5`，本轮未请求 commit |
 | scope diff 守卫（`git diff --stat` 与 in-scope 一致，无越界修改）| ✅ FT7 改动集中在 evidence module/script/tests 与阶段文档 |
 | deferred 已三分类（A/B/C）且每项有承接位置 | ✅ |
 | owner-test 项未经 owner 复测的标 ⏸ PENDING（无「我修了」式宣称）| ✅ live capstone 明确 pending |
