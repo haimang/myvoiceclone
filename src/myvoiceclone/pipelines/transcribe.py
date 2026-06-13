@@ -2,6 +2,7 @@ import json
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Artifact
+from myvoiceclone.domain.states import SegmentStatus
 from myvoiceclone.storage.repositories import SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.asr.whisper_adapter import WhisperAdapter
@@ -19,7 +20,7 @@ def run_transcribe(
     transcribed_segments = []
     
     for seg in segments:
-        if seg.status != "cleaned" or not seg.cleaned_artifact_id:
+        if seg.status != SegmentStatus.CLEANED.value or not seg.cleaned_artifact_id:
             continue
             
         clean_art = artifact_store.get_artifact(seg.cleaned_artifact_id)
@@ -55,7 +56,7 @@ def run_transcribe(
             )
             
             seg.transcript = full_text
-            seg.status = "transcribed"
+            seg.status = SegmentStatus.TRANSCRIBED.value
             # Save ASR confidence metadata
             avg_conf = sum([s.confidence for s in transcript_segs]) / len(transcript_segs) if transcript_segs else 0.0
             seg.metadata_json["asr_confidence"] = avg_conf
@@ -65,7 +66,7 @@ def run_transcribe(
             transcribed_segments.append(seg)
             
         except Exception as e:
-            seg.status = "transcribe_failed"
+            seg.status = SegmentStatus.TRANSCRIBE_FAILED.value
             seg_repo.save(seg)
             
     conn.commit()

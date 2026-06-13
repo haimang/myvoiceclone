@@ -2,6 +2,7 @@ import os
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Artifact
+from myvoiceclone.domain.states import SegmentStatus
 from myvoiceclone.storage.repositories import SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.separation.demucs_adapter import DemucsAdapter
@@ -19,7 +20,7 @@ def run_clean(
     cleaned_segments = []
     
     for seg in segments:
-        if seg.status != "sliced" or not seg.audio_artifact_id:
+        if seg.status != SegmentStatus.SLICED.value or not seg.audio_artifact_id:
             continue
             
         audio_art = artifact_store.get_artifact(seg.audio_artifact_id)
@@ -56,13 +57,13 @@ def run_clean(
             )
             
             seg.cleaned_artifact_id = cleaned_art.id
-            seg.status = "cleaned"
+            seg.status = SegmentStatus.CLEANED.value
             seg_repo.save(seg)
             cleaned_segments.append(seg)
             
         except Exception as e:
             # Failure does not delete original segment audio. We mark status but preserve seg info.
-            seg.status = "clean_failed"
+            seg.status = SegmentStatus.CLEAN_FAILED.value
             seg_repo.save(seg)
             
     conn.commit()

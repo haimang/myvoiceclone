@@ -2,7 +2,9 @@ import os
 import sqlite3
 import uuid
 from typing import Dict, Any, Optional
+from datetime import datetime
 from myvoiceclone.domain.entities import ModelRun, TrainRequest, ConvertRequest, SynthRequest
+from myvoiceclone.domain.states import DatasetStatus, ModelRunStatus
 from myvoiceclone.storage.repositories import DatasetRepository, ModelRunRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.training.rvc_adapter import RvcAdapter
@@ -29,7 +31,7 @@ def run_train_rvc(
         raise ValueError(f"Dataset {dataset_id} not found")
         
     # Strictly check that the dataset is frozen
-    if ds.status != "frozen":
+    if ds.status != DatasetStatus.FROZEN.value:
         raise ValueError(f"Dataset {dataset_id} must be frozen before training. Current status: {ds.status}")
 
     run_repo = ModelRunRepository(conn)
@@ -39,8 +41,9 @@ def run_train_rvc(
         id=run_id,
         name=model_name,
         dataset_id=dataset_id,
-        status="running",
-        config_json=config
+        status=ModelRunStatus.RUNNING.value,
+        config_json=config,
+        model_family="rvc"
     )
     run_repo.save(run)
     conn.commit()
@@ -54,7 +57,7 @@ def run_train_rvc(
         )
         train_res = rvc_adapter.train(train_req)
         
-        if train_res.status != "completed":
+        if train_res.status != ModelRunStatus.COMPLETED.value:
             raise RuntimeError(f"RVC training failed: {train_res.error_msg}")
 
         # Save checkpoint artifact
@@ -77,7 +80,7 @@ def run_train_rvc(
         )
         convert_res = rvc_adapter.convert(convert_req)
         
-        if convert_res.status != "completed":
+        if convert_res.status != ModelRunStatus.COMPLETED.value:
             raise RuntimeError(f"RVC audio conversion failed: {convert_res.error_msg}")
 
         # Save rendered sample artifact
@@ -99,17 +102,19 @@ def run_train_rvc(
         )
 
         # Update ModelRun to completed
-        run.status = "completed"
+        run.status = ModelRunStatus.COMPLETED.value
         # We append metrics and artifact ids to config_json
         run.config_json["metrics"] = train_res.metrics
         run.config_json["checkpoint_artifact_id"] = checkpoint_art.id
         run.config_json["rendered_artifact_id"] = rendered_art.id
+        run.checkpoint_artifact_id = checkpoint_art.id
+        run.finished_at = datetime.utcnow()
         run_repo.save(run)
         conn.commit()
         return run
 
     except Exception as e:
-        run.status = "failed"
+        run.status = ModelRunStatus.FAILED.value
         if "config_json" not in run.__dict__ or run.config_json is None:
             run.config_json = {}
         run.config_json["error_msg"] = str(e)
@@ -138,8 +143,9 @@ def run_synth_xtts(
         id=run_id,
         name=f"xtts_synth_{speaker_id}",
         dataset_id=None,
-        status="running",
-        config_json=config
+        status=ModelRunStatus.RUNNING.value,
+        config_json=config,
+        model_family="xtts"
     )
     run_repo.save(run)
     conn.commit()
@@ -153,7 +159,7 @@ def run_synth_xtts(
         )
         synth_res = xtts_adapter.synth(synth_req)
         
-        if synth_res.status != "completed":
+        if synth_res.status != ModelRunStatus.COMPLETED.value:
             raise RuntimeError(f"XTTS synthesis failed: {synth_res.error_msg}")
 
         # Save synthetic audio artifact
@@ -174,14 +180,15 @@ def run_synth_xtts(
             }
         )
 
-        run.status = "completed"
+        run.status = ModelRunStatus.COMPLETED.value
         run.config_json["rendered_artifact_id"] = rendered_art.id
+        run.finished_at = datetime.utcnow()
         run_repo.save(run)
         conn.commit()
         return run
 
     except Exception as e:
-        run.status = "failed"
+        run.status = ModelRunStatus.FAILED.value
         if "config_json" not in run.__dict__ or run.config_json is None:
             run.config_json = {}
         run.config_json["error_msg"] = str(e)
@@ -297,7 +304,7 @@ def run_train_sovits(
     ds = ds_repo.get_by_id(dataset_id)
     if not ds:
         raise ValueError(f"Dataset {dataset_id} not found")
-    if ds.status != "frozen":
+    if ds.status != DatasetStatus.FROZEN.value:
         raise ValueError(f"Dataset {dataset_id} must be frozen before training")
         
     run_repo = ModelRunRepository(conn)
@@ -305,18 +312,19 @@ def run_train_sovits(
     if model_run_id:
         run = run_repo.get_by_id(model_run_id)
         if not run:
-            run = ModelRun(id=model_run_id, name=model_name, dataset_id=dataset_id, status="queued", config_json=config)
+            run = ModelRun(id=model_run_id, name=model_name, dataset_id=dataset_id, status=ModelRunStatus.QUEUED.value, config_json=config, model_family="sovits")
         else:
-            run.status = "queued"
+            run.status = ModelRunStatus.QUEUED.value
+            run.model_family = run.model_family or "sovits"
     else:
         model_run_id = f"run_{uuid.uuid4().hex[:12]}"
-        run = ModelRun(id=model_run_id, name=model_name, dataset_id=dataset_id, status="queued", config_json=config)
+        run = ModelRun(id=model_run_id, name=model_name, dataset_id=dataset_id, status=ModelRunStatus.QUEUED.value, config_json=config, model_family="sovits")
         
     run_repo.save(run)
     conn.commit()
     
     # queued -> preparing
-    run.status = "preparing"
+    run.status = ModelRunStatus.PREPARING.value
     run_repo.save(run)
     conn.commit()
     
@@ -326,7 +334,7 @@ def run_train_sovits(
     conn.commit()
     
     # preparing -> training
-    run.status = "training"
+    run.status = ModelRunStatus.TRAINING.value
     run_repo.save(run)
     conn.commit()
     
@@ -344,7 +352,7 @@ def run_train_sovits(
                 cursor = conn.cursor()
                 cursor.execute("SELECT status FROM jobs WHERE id = ?;", (job_id,))
                 row = cursor.fetchone()
-                if row and row[0] in ("cancelled", "cancelling"):
+                if row and row[0] in (ModelRunStatus.CANCELLED.value, "cancelling"):
                     raise KeyboardInterrupt("Job cancelled by user")
             
             if resume_from_checkpoint_id and epoch == 1:
@@ -352,7 +360,7 @@ def run_train_sovits(
             else:
                 train_res = sovits_adapter.train(TrainRequest(dataset_id, model_name, config))
                 
-            if train_res.status != "completed":
+            if train_res.status != ModelRunStatus.COMPLETED.value:
                 raise RuntimeError(f"So-VITS training step failed at epoch {epoch}: {train_res.error_msg}")
                 
             loss = train_res.metrics.get("loss", 0.0) - epoch * 0.001
@@ -372,17 +380,18 @@ def run_train_sovits(
             last_checkpoint_art_id = checkpoint_art.id
             
             # Update ModelRun to checkpointed
-            run.status = "checkpointed"
+            run.status = ModelRunStatus.CHECKPOINTED.value
             run.config_json["last_checkpoint_artifact_id"] = last_checkpoint_art_id
             run.config_json["current_epoch"] = epoch
+            run.checkpoint_artifact_id = last_checkpoint_art_id
             run_repo.save(run)
             conn.commit()
 
         # training completed -> completed
-        run.status = "completed"
+        run.status = ModelRunStatus.COMPLETED.value
         
-        from myvoiceclone.config import get_project_root
-        export_dir = os.path.join(get_project_root(), "models", "registry")
+        from myvoiceclone.config import resolve_models_dir
+        export_dir = os.path.join(resolve_models_dir(), "registry")
         os.makedirs(export_dir, exist_ok=True)
         export_path = os.path.join(export_dir, f"{model_name}_final.pth")
         
@@ -418,21 +427,27 @@ def run_train_sovits(
         run.config_json["registered_model_artifact_id"] = registered_model_art.id
         run.config_json["rendered_artifact_id"] = rendered_art.id
         run.config_json["metrics"] = {"final_loss": loss}
-        run.config_json["env_digest"] = capture_env_digest()
+        env_digest = capture_env_digest()
+        run.config_json["env_digest"] = env_digest
+        run.env_digest = env_digest
+        run.git_commit = env_digest.get("git_commit")
+        run.checkpoint_artifact_id = last_checkpoint_art_id
+        run.finished_at = datetime.utcnow()
         run_repo.save(run)
         conn.commit()
         return run
 
     except KeyboardInterrupt as ke:
-        run.status = "cancelled"
+        run.status = ModelRunStatus.CANCELLED.value
         run.config_json["error_msg"] = "Cancelled by user"
+        run.finished_at = datetime.utcnow()
         run_repo.save(run)
         conn.commit()
         raise ke
     except Exception as e:
-        run.status = "failed"
+        run.status = ModelRunStatus.FAILED.value
         run.config_json["error_msg"] = str(e)
+        run.finished_at = datetime.utcnow()
         run_repo.save(run)
         conn.commit()
         raise e
-

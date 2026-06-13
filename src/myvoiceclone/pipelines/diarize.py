@@ -3,6 +3,7 @@ import uuid
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Speaker
+from myvoiceclone.domain.states import SegmentStatus
 from myvoiceclone.storage.repositories import RecordingRepository, SegmentRepository, SpeakerRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.diarization.pyannote_adapter import PyannoteAdapter
@@ -71,7 +72,7 @@ def run_diarize(
             audio_artifact_id=None,
             cleaned_artifact_id=None,
             transcript=None,
-            status="draft",
+            status=SegmentStatus.DRAFT.value,
             metadata_json={
                 "turns_artifact_id": turns_artifact.id
             }

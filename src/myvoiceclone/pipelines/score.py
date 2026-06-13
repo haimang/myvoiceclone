@@ -1,6 +1,7 @@
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment
+from myvoiceclone.domain.states import SegmentStatus
 from myvoiceclone.storage.repositories import SegmentRepository
 
 def calculate_duration_score(duration: float) -> float:
@@ -29,7 +30,7 @@ def run_score(
     
     for seg in segments:
         # We only score transcribed segments (or allow re-scoring of processed/needs_review segments)
-        if seg.status not in ("transcribed", "processed", "needs_review"):
+        if seg.status not in (SegmentStatus.TRANSCRIBED.value, SegmentStatus.PROCESSED.value, SegmentStatus.NEEDS_REVIEW.value):
             continue
             
         duration = seg.end_sec - seg.start_sec
@@ -49,9 +50,9 @@ def run_score(
         
         # Update status based on score threshold
         if overall_score < min_quality_score:
-            seg.status = "needs_review"
+            seg.status = SegmentStatus.NEEDS_REVIEW.value
         else:
-            seg.status = "processed"
+            seg.status = SegmentStatus.PROCESSED.value
             
         seg_repo.save(seg)
         scored_segments.append(seg)

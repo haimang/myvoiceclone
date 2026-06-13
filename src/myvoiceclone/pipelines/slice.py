@@ -2,6 +2,7 @@ import os
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Artifact
+from myvoiceclone.domain.states import SegmentStatus
 from myvoiceclone.storage.repositories import RecordingRepository, SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.audio.ffmpeg import FFmpegAdapter
@@ -34,7 +35,7 @@ def run_slice(
         
         # Duration bound check
         if duration < min_duration or duration > max_duration:
-            seg.status = "ignored_duration_bounds"
+            seg.status = SegmentStatus.IGNORED_DURATION_BOUNDS.value
             seg_repo.save(seg)
             continue
             
@@ -66,7 +67,7 @@ def run_slice(
         )
         
         seg.audio_artifact_id = slice_artifact.id
-        seg.status = "sliced"
+        seg.status = SegmentStatus.SLICED.value
         seg_repo.save(seg)
         processed_segments.append(seg)
         

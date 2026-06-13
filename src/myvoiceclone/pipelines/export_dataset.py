@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime
 from typing import List, Dict, Any
 from myvoiceclone.domain.entities import Dataset, DatasetSegment, Artifact
+from myvoiceclone.domain.states import DatasetStatus, SegmentStatus
 from myvoiceclone.storage.repositories import DatasetRepository, SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 
@@ -39,7 +40,7 @@ def run_export_dataset(
     
     # Check if dataset already exists and is frozen
     existing = ds_repo.get_by_id(dataset_id)
-    if existing and existing.status == "frozen":
+    if existing and existing.status == DatasetStatus.FROZEN.value:
         raise RuntimeError(f"Dataset {dataset_id} is frozen and cannot be modified")
         
     # Get all keep / processed / fixed segments
@@ -48,9 +49,17 @@ def run_export_dataset(
         """
         SELECT id, recording_id, speaker_id, start_sec, end_sec, cleaned_artifact_id, transcript, quality_score
         FROM segments
-        WHERE status IN ('processed', 'keep', 'fixed', 'cleaned', 'transcribed') 
+        WHERE status IN (?, ?, ?, ?, ?)
           AND cleaned_artifact_id IS NOT NULL;
         """
+        ,
+        (
+            SegmentStatus.PROCESSED.value,
+            SegmentStatus.KEEP.value,
+            SegmentStatus.FIXED.value,
+            SegmentStatus.CLEANED.value,
+            SegmentStatus.TRANSCRIBED.value,
+        ),
     )
     rows = cursor.fetchall()
     
@@ -84,7 +93,7 @@ def run_export_dataset(
     ds = Dataset(
         id=dataset_id,
         name=name,
-        status="draft",
+        status=DatasetStatus.DRAFT.value,
         filter_json={
             "train_ratio": train_ratio,
             "val_ratio": val_ratio,
@@ -128,7 +137,7 @@ def run_export_dataset(
     )
     
     # Update dataset to frozen status
-    ds.status = "frozen"
+    ds.status = DatasetStatus.FROZEN.value
     ds.manifest_artifact_id = manifest_art.id
     ds.manifest_sha256 = manifest_art.sha256
     ds.frozen_at = datetime.utcnow()

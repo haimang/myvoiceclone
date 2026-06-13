@@ -2,6 +2,7 @@ import sqlite3
 import logging
 from typing import Dict, Any, Optional
 from myvoiceclone.domain.entities import Job
+from myvoiceclone.domain.states import JobStatus
 from myvoiceclone.storage.repositories import JobRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.jobs.events import write_job_event
@@ -70,9 +71,9 @@ class JobRunner:
             raise ValueError(f"Job {job_id} not found")
             
         old_status = job.status
-        job.status = "running"
+        job.status = JobStatus.RUNNING.value
         self.repo.save(job)
-        write_job_event(self.conn, job_id, "start", old_status, "running", "Job started execution")
+        write_job_event(self.conn, job_id, "start", old_status, JobStatus.RUNNING.value, "Job started execution")
         self.conn.commit()
         
         try:
@@ -99,25 +100,25 @@ class JobRunner:
             else:
                 raise ValueError(f"Unsupported job type: {job.name}")
                 
-            job.status = "completed"
+            job.status = JobStatus.COMPLETED.value
             self.repo.save(job)
-            write_job_event(self.conn, job_id, "complete", "running", "completed", "Job completed successfully")
+            write_job_event(self.conn, job_id, "complete", JobStatus.RUNNING.value, JobStatus.COMPLETED.value, "Job completed successfully")
             self.conn.commit()
             
         except KeyboardInterrupt as ke:
             logger.info(f"Job {job_id} cancelled by user")
-            job.status = "cancelled"
+            job.status = JobStatus.CANCELLED.value
             job.error_msg = "Cancelled by user"
             self.repo.save(job)
-            write_job_event(self.conn, job_id, "cancel", "running", "cancelled", "Job cancelled by user")
+            write_job_event(self.conn, job_id, "cancel", JobStatus.RUNNING.value, JobStatus.CANCELLED.value, "Job cancelled by user")
             self.conn.commit()
             raise ke
         except Exception as e:
             logger.error(f"Job {job_id} failed: {e}")
-            job.status = "failed"
+            job.status = JobStatus.FAILED.value
             job.error_msg = str(e)
             self.repo.save(job)
-            write_job_event(self.conn, job_id, "fail", "running", "failed", f"Job failed: {e}")
+            write_job_event(self.conn, job_id, "fail", JobStatus.RUNNING.value, JobStatus.FAILED.value, f"Job failed: {e}")
             self.conn.commit()
             raise e
 

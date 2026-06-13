@@ -2,6 +2,7 @@ import uuid
 import sqlite3
 from typing import List, Optional
 from myvoiceclone.domain.entities import Segment, Speaker
+from myvoiceclone.domain.states import SegmentStatus
 from myvoiceclone.storage.repositories import SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.storage.vector_store import VectorStore
@@ -14,7 +15,7 @@ def update_segment_status(
     reason: str,
     reviewer: str
 ) -> Segment:
-    if status not in ("keep", "drop", "needs_review", "fixed"):
+    if status not in (SegmentStatus.KEEP.value, SegmentStatus.DROP.value, SegmentStatus.NEEDS_REVIEW.value, "fixed"):
         raise ValueError(f"Invalid status: {status}")
     if not reason:
         raise ValueError("Reason is required for status updates")
@@ -62,7 +63,12 @@ def run_deduplication(
     
     candidates = []
     for seg in segments:
-        if seg.status in ("processed", "keep", "cleaned", "transcribed") and seg.cleaned_artifact_id:
+        if seg.status in (
+            SegmentStatus.PROCESSED.value,
+            SegmentStatus.KEEP.value,
+            SegmentStatus.CLEANED.value,
+            SegmentStatus.TRANSCRIBED.value,
+        ) and seg.cleaned_artifact_id:
             candidates.append(seg)
             
     duplicate_ids = []
@@ -70,7 +76,7 @@ def run_deduplication(
     for seg in candidates:
         # Check if already marked as drop in this run
         current_seg = repo.get_by_id(seg.id)
-        if current_seg.status == "drop":
+        if current_seg.status == SegmentStatus.DROP.value:
             continue
             
         clean_art = artifact_store.get_artifact(seg.cleaned_artifact_id)
@@ -95,7 +101,7 @@ def run_deduplication(
                 
             if distance < threshold:
                 other_seg = repo.get_by_id(other_id)
-                if not other_seg or other_seg.status == "drop":
+                if not other_seg or other_seg.status == SegmentStatus.DROP.value:
                     continue
                     
                 # Deduplication decision: keep the one with higher quality score
@@ -107,7 +113,7 @@ def run_deduplication(
                     update_segment_status(
                         conn=conn,
                         segment_id=other_id,
-                        status="drop",
+                        status=SegmentStatus.DROP.value,
                         reason=f"duplicate of {seg.id} (distance {distance:.4f})",
                         reviewer="deduper"
                     )
@@ -117,7 +123,7 @@ def run_deduplication(
                     update_segment_status(
                         conn=conn,
                         segment_id=seg.id,
-                        status="drop",
+                        status=SegmentStatus.DROP.value,
                         reason=f"duplicate of {other_id} (distance {distance:.4f})",
                         reviewer="deduper"
                     )

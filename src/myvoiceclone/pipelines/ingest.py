@@ -4,6 +4,7 @@ import uuid
 import shutil
 import sqlite3
 from myvoiceclone.domain.entities import Recording, Artifact
+from myvoiceclone.domain.states import RecordingStatus
 from myvoiceclone.storage.repositories import RecordingRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.audio.ffmpeg import FFmpegAdapter
@@ -96,7 +97,7 @@ def run_ingest(
         duration_sec=probe_info.duration_sec,
         sample_rate=16000,
         channels=1,
-        status="processed",
+        status=RecordingStatus.PROCESSED.value,
         metadata_json={
             "raw_artifact_id": raw_artifact.id,
             "normalized_artifact_id": normalized_artifact.id
