@@ -1,8 +1,9 @@
 import sqlite3
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any, Optional
 from myvoiceclone.api.dependencies import get_db
-from myvoiceclone.api.schemas import ReportResponse
+from myvoiceclone.api.schemas import ReportResponse, ReleaseGateResponse
 from myvoiceclone.storage.repositories import ReportRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.config import load_local_config
@@ -22,6 +23,25 @@ class TrainReportCreate(BaseModel):
 class GateReportCreate(BaseModel):
     dataset_id: str
     baseline_report_id: str
+
+class ReleaseGateCreate(BaseModel):
+    gate_id: str
+    model_run_id: str
+
+class ReleaseGateWaiveRequest(BaseModel):
+    approved_by: str
+    reason: str
+
+def parse_gate_row(row) -> dict:
+    d = dict(row)
+    if d.get("details_json"):
+        try:
+            d["details_json"] = json.loads(d["details_json"])
+        except Exception:
+            d["details_json"] = {}
+    else:
+        d["details_json"] = {}
+    return d
 
 @router.get("/reports", response_model=List[ReportResponse])
 def list_reports(db: sqlite3.Connection = Depends(get_db)):
@@ -60,6 +80,86 @@ def create_gate_report(req: GateReportCreate, db: sqlite3.Connection = Depends(g
         return evaluate_long_train_gate(db, req.dataset_id, req.baseline_report_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/reports/release-gates", response_model=ReleaseGateResponse)
+def create_release_gate(req: ReleaseGateCreate, db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM model_runs WHERE id = ?;", (req.model_run_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Model run not found")
+    
+    from myvoiceclone.domain.policies import check_release_policy
+    policy_res = check_release_policy(db, req.model_run_id)
+    passed_int = 1 if policy_res["passed"] else 0
+    
+    details_json = json.dumps({
+        "reason": policy_res["reason"],
+        "unauthorized_speakers": policy_res.get("unauthorized_speakers", [])
+    })
+    
+    try:
+        db.execute(
+            """
+            INSERT INTO release_gates (id, model_run_id, passed, details_json)
+            VALUES (?, ?, ?, ?);
+            """,
+            (req.gate_id, req.model_run_id, passed_int, details_json)
+        )
+        db.commit()
+    except sqlite3.IntegrityError as e:
+        raise HTTPException(status_code=400, detail=f"Database integrity error: {e}")
+        
+    cursor.execute("SELECT * FROM release_gates WHERE id = ?;", (req.gate_id,))
+    row = cursor.fetchone()
+    return parse_gate_row(row)
+
+@router.post("/reports/release-gates/{gate_id}/waive", response_model=ReleaseGateResponse)
+def waive_release_gate(gate_id: str, req: ReleaseGateWaiveRequest, db: sqlite3.Connection = Depends(get_db)):
+    if not req.reason.strip():
+        raise HTTPException(status_code=400, detail="Waive reason is required")
+        
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM release_gates WHERE id = ?;", (gate_id,))
+    row = cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Release gate not found")
+        
+    details = {}
+    if row["details_json"]:
+        try:
+            details = json.loads(row["details_json"])
+        except Exception:
+            pass
+    details["waived"] = True
+    details["waived_reason"] = req.reason
+    
+    db.execute(
+        """
+        UPDATE release_gates 
+        SET passed = 1, approved_by = ?, approved_at = CURRENT_TIMESTAMP, details_json = ? 
+        WHERE id = ?;
+        """,
+        (req.approved_by, json.dumps(details), gate_id)
+    )
+    
+    db.execute(
+        "INSERT INTO policy_events (event_type, status, details_json) VALUES (?, ?, ?);",
+        ("release_gate_waived", "passed", json.dumps({"gate_id": gate_id, "approved_by": req.approved_by, "reason": req.reason}))
+    )
+    db.commit()
+    
+    cursor.execute("SELECT * FROM release_gates WHERE id = ?;", (gate_id,))
+    row = cursor.fetchone()
+    return parse_gate_row(row)
+
+@router.get("/reports/release-gates/{gate_id}", response_model=ReleaseGateResponse)
+def get_release_gate(gate_id: str, db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM release_gates WHERE id = ?;", (gate_id,))
+    row = cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Release gate not found")
+    return parse_gate_row(row)
 
 @router.get("/audit/trace")
 def get_audit_trace(subject_id: str, subject_type: str, db: sqlite3.Connection = Depends(get_db)):

@@ -91,7 +91,10 @@ def run_train_rvc(
             metadata_json={
                 "model_run_id": run_id,
                 "duration_sec": convert_res.duration_sec,
-                "source_audio_path": src_path
+                "source_audio_path": src_path,
+                "synthetic": True,
+                "source_model_run": run_id,
+                "watermark": "placeholder"
             }
         )
 
@@ -164,7 +167,10 @@ def run_synth_xtts(
                 "model_run_id": run_id,
                 "text": text,
                 "speaker_id": speaker_id,
-                "duration_sec": synth_res.duration_sec
+                "duration_sec": synth_res.duration_sec,
+                "synthetic": True,
+                "source_model_run": run_id,
+                "watermark": "placeholder"
             }
         )
 
@@ -401,7 +407,12 @@ def run_train_sovits(
             artifact_type="rendered_audio",
             parent_artifact_id=registered_model_art.id,
             job_id=job_id,
-            metadata_json={"model_run_id": model_run_id}
+            metadata_json={
+                "model_run_id": model_run_id,
+                "synthetic": True,
+                "source_model_run": model_run_id,
+                "watermark": "placeholder"
+            }
         )
         
         run.config_json["registered_model_artifact_id"] = registered_model_art.id

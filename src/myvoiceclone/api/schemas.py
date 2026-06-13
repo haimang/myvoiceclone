@@ -77,3 +77,11 @@ class ReportResponse(BaseModel):
     summary_json: Dict[str, Any]
     artifact_id: Optional[str]
     created_at: Optional[datetime]
+
+class ReleaseGateResponse(BaseModel):
+    id: str
+    model_run_id: str
+    passed: int
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    details_json: Dict[str, Any] = {}
