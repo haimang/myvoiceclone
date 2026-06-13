@@ -1,9 +1,9 @@
 import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from myvoiceclone.api.dependencies import get_db
-from myvoiceclone.api.schemas import InferenceRequest, ModelRunResponse
+from myvoiceclone.api.schemas import InferenceRequest, ModelRunResponse, RealInferenceRequestBody, ArtifactResponse
 # V5 fix: replaced direct pipeline import with domain service
-from myvoiceclone.services import service_synth_xtts
+from myvoiceclone.services import service_synth_xtts, service_run_real_inference
 
 router = APIRouter(prefix="/inference", tags=["inference"])
 
@@ -20,3 +20,21 @@ def perform_inference(req: InferenceRequest, db: sqlite3.Connection = Depends(ge
         return run
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/real", response_model=ArtifactResponse)
+def perform_real_inference(req: RealInferenceRequestBody, db: sqlite3.Connection = Depends(get_db)):
+    try:
+        artifact = service_run_real_inference(
+            conn=db,
+            text=req.text,
+            reference_artifact_id=req.reference_artifact_id,
+            model_id=req.model_id,
+            source_artifact_id=req.source_artifact_id,
+            language=req.language,
+            adapter_mode=req.adapter_mode,
+            config=req.config,
+        )
+        return artifact
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

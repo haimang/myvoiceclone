@@ -38,6 +38,15 @@ class ReleaseGateWaiveRequest(BaseModel):
     approved_by: str
     reason: str
 
+class SubjectiveReportCreate(BaseModel):
+    report_id: str
+    run_id: str
+    abx_score: float
+    mos_score: float
+    reviewer: str
+    comment: str = ""
+    sample_artifact_id: Optional[str] = None
+
 def parse_gate_row(row) -> dict:
     d = dict(row)
     if d.get("details_json"):
@@ -55,6 +64,17 @@ def parse_gate_row(row) -> dict:
     else:
         d["decision_json"] = {}
     return d
+
+
+def _json_columns(row, *columns: str) -> dict:
+    data = dict(row)
+    for column in columns:
+        if column in data:
+            try:
+                data[column] = json.loads(data[column]) if data[column] else {}
+            except Exception:
+                data[column] = {}
+    return data
 
 @router.get("/reports", response_model=List[ReportResponse])
 def list_reports(db: sqlite3.Connection = Depends(get_db)):
@@ -85,6 +105,25 @@ def create_train_report(req: TrainReportCreate, db: sqlite3.Connection = Depends
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@router.post("/reports/subjective", response_model=ReportResponse)
+def create_subjective_report(req: SubjectiveReportCreate, db: sqlite3.Connection = Depends(get_db)):
+    try:
+        from myvoiceclone.services import service_generate_subjective_report
+
+        return service_generate_subjective_report(
+            db,
+            report_id=req.report_id,
+            run_id=req.run_id,
+            abx_score=req.abx_score,
+            mos_score=req.mos_score,
+            reviewer=req.reviewer,
+            comment=req.comment,
+            sample_artifact_id=req.sample_artifact_id,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/reports/gate")
 def create_gate_report(req: GateReportCreate, db: sqlite3.Connection = Depends(get_db)):
     try:
@@ -100,15 +139,14 @@ def create_release_gate(req: ReleaseGateCreate, db: sqlite3.Connection = Depends
     if not cursor.fetchone():
         raise HTTPException(status_code=404, detail="Model run not found")
     
-    from myvoiceclone.domain.policies import check_release_policy
+    from myvoiceclone.domain.policies import check_release_policy, evaluate_release_layers
     policy_res = check_release_policy(db, req.model_run_id)
-    passed_int = 1 if policy_res["passed"] else 0
-    gate_status = ReleaseGateStatus.PASSED.value if policy_res["passed"] else ReleaseGateStatus.FAILED.value
-    
-    details_json = json.dumps({
-        "reason": policy_res["reason"],
-        "unauthorized_speakers": policy_res.get("unauthorized_speakers", [])
-    })
+    release_layers = evaluate_release_layers(db, req.model_run_id, policy_res)
+    passed = release_layers["smoke_pass"] and release_layers["quality_pass"]
+    passed_int = 1 if passed else 0
+    gate_status = ReleaseGateStatus.PASSED.value if passed else ReleaseGateStatus.FAILED.value
+
+    details_json = json.dumps(release_layers)
     
     try:
         db.execute(
@@ -145,6 +183,8 @@ def waive_release_gate(gate_id: str, req: ReleaseGateWaiveRequest, db: sqlite3.C
             pass
     details["waived"] = True
     details["waived_reason"] = req.reason
+    details["manual_waived"] = True
+    details.setdefault("blocked_reasons", [])
     
     db.execute(
         """
@@ -208,7 +248,7 @@ def get_audit_trace(subject_id: str, subject_type: str, db: sqlite3.Connection =
             segs = cursor.fetchall()
             for seg in segs:
                 trace_events.append({"timestamp": get_time(seg, "created_at"), "type": "segment", "data": dict(seg)})
-                
+
                 # Segment reviews
                 cursor.execute("SELECT * FROM segment_reviews WHERE segment_id = ?;", (seg["id"],))
                 revs = cursor.fetchall()
@@ -237,13 +277,13 @@ def get_audit_trace(subject_id: str, subject_type: str, db: sqlite3.Connection =
             cursor.execute("SELECT * FROM job_events WHERE job_id = ?;", (subject_id,))
             evs = cursor.fetchall()
             for ev in evs:
-                trace_events.append({"timestamp": get_time(ev, "created_at"), "type": "job_event", "data": dict(ev)})
+                trace_events.append({"timestamp": get_time(ev, "created_at"), "type": "job_event", "data": _json_columns(ev, "metadata_json")})
                 
             # Artifacts produced by this job
-            cursor.execute("SELECT * FROM artifacts WHERE job_id = ?;", (subject_id,))
+            cursor.execute("SELECT * FROM artifacts WHERE job_id = ? OR created_by_job_id = ?;", (subject_id, subject_id))
             arts = cursor.fetchall()
             for art in arts:
-                trace_events.append({"timestamp": get_time(art, "created_at"), "type": "artifact", "data": dict(art)})
+                trace_events.append({"timestamp": get_time(art, "created_at"), "type": "artifact", "data": _json_columns(art, "metadata_json", "params_json")})
                 
     elif subject_type == "run":
         cursor.execute("SELECT * FROM model_runs WHERE id = ?;", (subject_id,))
@@ -255,19 +295,48 @@ def get_audit_trace(subject_id: str, subject_type: str, db: sqlite3.Connection =
             cursor.execute("SELECT * FROM eval_metrics WHERE run_id = ?;", (subject_id,))
             metrics = cursor.fetchall()
             for m in metrics:
-                trace_events.append({"timestamp": get_time(m, "created_at"), "type": "eval_metric", "data": dict(m)})
+                trace_events.append({"timestamp": get_time(m, "created_at"), "type": "eval_metric", "data": _json_columns(m, "metric_json")})
                 
             # Samples
             cursor.execute("SELECT * FROM eval_samples WHERE run_id = ?;", (subject_id,))
             samples = cursor.fetchall()
             for s in samples:
-                trace_events.append({"timestamp": get_time(s, "created_at"), "type": "eval_sample", "data": dict(s)})
+                trace_events.append({"timestamp": get_time(s, "created_at"), "type": "eval_sample", "data": _json_columns(s, "scores_json")})
+
+            cursor.execute("SELECT * FROM release_gates WHERE model_run_id = ?;", (subject_id,))
+            for gate in cursor.fetchall():
+                trace_events.append({"timestamp": get_time(gate, "created_at"), "type": "release_gate", "data": _json_columns(gate, "details_json", "decision_json")})
+
+            cursor.execute("SELECT * FROM policy_events WHERE subject_id = ? OR payload_json LIKE ?;", (subject_id, f"%{subject_id}%"))
+            for policy in cursor.fetchall():
+                trace_events.append({"timestamp": get_time(policy, "created_at"), "type": "policy_event", "data": _json_columns(policy, "details_json", "payload_json")})
                 
     elif subject_type == "report":
         cursor.execute("SELECT * FROM reports WHERE id = ?;", (subject_id,))
         rpt = cursor.fetchone()
         if rpt:
-            trace_events.append({"timestamp": get_time(rpt, "created_at"), "type": "report", "data": dict(rpt)})
+            trace_events.append({"timestamp": get_time(rpt, "created_at"), "type": "report", "data": _json_columns(rpt, "summary_json")})
+
+            cursor.execute("SELECT * FROM eval_metrics WHERE report_id = ?;", (subject_id,))
+            for metric in cursor.fetchall():
+                trace_events.append({"timestamp": get_time(metric, "created_at"), "type": "eval_metric", "data": _json_columns(metric, "metric_json")})
+
+            cursor.execute("SELECT * FROM eval_samples WHERE report_id = ?;", (subject_id,))
+            for sample in cursor.fetchall():
+                trace_events.append({"timestamp": get_time(sample, "created_at"), "type": "eval_sample", "data": _json_columns(sample, "scores_json")})
+
+            cursor.execute("SELECT * FROM policy_events WHERE subject_type = 'report' AND subject_id = ?;", (subject_id,))
+            for policy in cursor.fetchall():
+                trace_events.append({"timestamp": get_time(policy, "created_at"), "type": "policy_event", "data": _json_columns(policy, "details_json", "payload_json")})
+
+    elif subject_type == "release_gate":
+        cursor.execute("SELECT * FROM release_gates WHERE id = ?;", (subject_id,))
+        gate = cursor.fetchone()
+        if gate:
+            trace_events.append({"timestamp": get_time(gate, "created_at"), "type": "release_gate", "data": _json_columns(gate, "details_json", "decision_json")})
+            cursor.execute("SELECT * FROM policy_events WHERE subject_type = 'release_gate' AND subject_id = ?;", (subject_id,))
+            for policy in cursor.fetchall():
+                trace_events.append({"timestamp": get_time(policy, "created_at"), "type": "policy_event", "data": _json_columns(policy, "details_json", "payload_json")})
             
     else:
         raise HTTPException(status_code=400, detail="Invalid subject_type")

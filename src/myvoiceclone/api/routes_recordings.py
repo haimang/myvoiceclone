@@ -3,7 +3,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from myvoiceclone.api.dependencies import get_db
-from myvoiceclone.api.schemas import RecordingResponse, JobResponse
+from myvoiceclone.api.schemas import RecordingResponse, JobResponse, PreprocessJobCreate
 from myvoiceclone.domain.entities import Job
 from myvoiceclone.domain.states import JobStatus
 from myvoiceclone.storage.repositories import RecordingRepository, JobRepository
@@ -32,6 +32,29 @@ def create_ingest_job(filepath: str, db: sqlite3.Connection = Depends(get_db)):
         name="ingest",
         status=JobStatus.PENDING.value,
         payload_json={"filepath": filepath}
+    )
+    job_repo.save(job)
+    db.commit()
+    return job
+
+
+@router.post("/preprocess", response_model=JobResponse)
+def create_preprocess_job(request: PreprocessJobCreate, db: sqlite3.Connection = Depends(get_db)):
+    if not request.filepath:
+        raise HTTPException(status_code=422, detail="filepath is required")
+
+    job_repo = JobRepository(db)
+    job_id = f"job_{uuid.uuid4().hex[:12]}"
+    job = Job(
+        id=job_id,
+        name="preprocess_all",
+        status=JobStatus.PENDING.value,
+        payload_json={
+            "filepath": request.filepath,
+            "min_duration": request.min_duration,
+            "max_duration": request.max_duration,
+            "min_quality_score": request.min_quality_score,
+        },
     )
     job_repo.save(job)
     db.commit()

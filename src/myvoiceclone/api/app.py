@@ -6,6 +6,7 @@ from myvoiceclone.api.routes_jobs import router as jobs_router
 from myvoiceclone.api.routes_training import router as training_router
 from myvoiceclone.api.routes_inference import router as inference_router
 from myvoiceclone.api.routes_reports import router as reports_router
+from myvoiceclone.api.routes_runs import router as runs_router
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
     app.include_router(training_router, prefix="/api")
     app.include_router(inference_router, prefix="/api")
     app.include_router(reports_router, prefix="/api")
+    app.include_router(runs_router, prefix="/api")
     
     @app.get("/health")
     def health():
