@@ -4,8 +4,9 @@ from myvoiceclone.domain.entities import SynthRequest
 from myvoiceclone.adapters.training.xtts_adapter import XttsAdapter
 
 @pytest.mark.unit
-def test_xtts_adapter_mock_synth():
-    os.environ["MOCK_ADAPTERS"] = "true"
+def test_xtts_adapter_mock_synth(monkeypatch):
+    # V13 fix: monkeypatch.setenv auto-restores MOCK_ADAPTERS after the test
+    monkeypatch.setenv("MOCK_ADAPTERS", "true")
     adapter = XttsAdapter()
     
     req = SynthRequest(

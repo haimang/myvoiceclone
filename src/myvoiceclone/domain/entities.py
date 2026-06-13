@@ -2,6 +2,19 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Dict, Any
 
+
+# ─────────────────────────────────────────────
+# Audio probe DTO — returned by torchaudio_io and ffmpeg adapters
+# V9 fix: torchaudio_io was returning a bare dict instead of this DTO
+# ─────────────────────────────────────────────
+@dataclass
+class AudioProbe:
+    """Typed result of an audio file probe operation."""
+    duration_sec: float
+    sample_rate: int
+    channels: int
+
+
 @dataclass
 class Speaker:
     id: str

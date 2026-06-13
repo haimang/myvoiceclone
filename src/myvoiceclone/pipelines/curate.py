@@ -28,8 +28,15 @@ def update_segment_status(
         
     old_status = seg.status
     seg.status = status
+    # V8 fix: persist drop_reason and reviewer into metadata_json so callers can inspect it
+    seg.metadata_json = dict(seg.metadata_json or {})
+    if reason:
+        seg.metadata_json["drop_reason"] = reason
+    if reviewer:
+        seg.metadata_json["reviewed_by"] = reviewer
+    seg.metadata_json["prev_status"] = old_status
     repo.save(seg)
-    
+
     # Write append-only segment review audit entry
     rev_id = f"rev_{uuid.uuid4().hex[:12]}"
     conn.execute(

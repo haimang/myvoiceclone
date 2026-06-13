@@ -82,6 +82,20 @@ class JobRunner:
                 self._execute_ingest(job)
             elif job.name == "train_sovits":
                 self._execute_train_sovits(job)
+            # V16 fix: per-step dispatch for individual preprocess steps
+            # Enables step-level retry without re-running the entire chain
+            elif job.name == "diarize":
+                self._execute_step_diarize(job)
+            elif job.name == "slice":
+                self._execute_step_slice(job)
+            elif job.name == "clean":
+                self._execute_step_clean(job)
+            elif job.name == "transcribe":
+                self._execute_step_transcribe(job)
+            elif job.name == "score":
+                self._execute_step_score(job)
+            elif job.name == "curate":
+                self._execute_step_curate(job)
             else:
                 raise ValueError(f"Unsupported job type: {job.name}")
                 
@@ -170,3 +184,65 @@ class JobRunner:
             job_id=job.id
         )
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # V16 fix: per-step execution methods for individual preprocess steps
+    # These enable step-level retry without re-running the entire chain.
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _execute_step_diarize(self, job: Job):
+        """Dispatch a 'diarize' job for a single recording."""
+        from myvoiceclone.pipelines.diarize import run_diarize
+        payload = job.payload_json
+        recording_id = payload.get("recording_id")
+        if not recording_id:
+            raise ValueError("Payload missing 'recording_id' key")
+        run_diarize(self.conn, self.artifact_store, self.pyannote_adapter, recording_id, job_id=job.id)
+
+    def _execute_step_slice(self, job: Job):
+        """Dispatch a 'slice' job for a single recording."""
+        from myvoiceclone.pipelines.slice import run_slice
+        payload = job.payload_json
+        recording_id = payload.get("recording_id")
+        if not recording_id:
+            raise ValueError("Payload missing 'recording_id' key")
+        min_dur = payload.get("min_duration", 2.0)
+        max_dur = payload.get("max_duration", 10.0)
+        run_slice(self.conn, self.artifact_store, self.ffmpeg_adapter, recording_id,
+                  min_duration=min_dur, max_duration=max_dur, job_id=job.id)
+
+    def _execute_step_clean(self, job: Job):
+        """Dispatch a 'clean' job for a single recording."""
+        from myvoiceclone.pipelines.clean import run_clean
+        payload = job.payload_json
+        recording_id = payload.get("recording_id")
+        if not recording_id:
+            raise ValueError("Payload missing 'recording_id' key")
+        run_clean(self.conn, self.artifact_store, self.demucs_adapter, recording_id, job_id=job.id)
+
+    def _execute_step_transcribe(self, job: Job):
+        """Dispatch a 'transcribe' job for a single recording."""
+        from myvoiceclone.pipelines.transcribe import run_transcribe
+        payload = job.payload_json
+        recording_id = payload.get("recording_id")
+        if not recording_id:
+            raise ValueError("Payload missing 'recording_id' key")
+        run_transcribe(self.conn, self.artifact_store, self.whisper_adapter, recording_id, job_id=job.id)
+
+    def _execute_step_score(self, job: Job):
+        """Dispatch a 'score' job for a single recording."""
+        from myvoiceclone.pipelines.score import run_score
+        payload = job.payload_json
+        recording_id = payload.get("recording_id")
+        if not recording_id:
+            raise ValueError("Payload missing 'recording_id' key")
+        min_quality = payload.get("min_quality_score", 0.6)
+        run_score(self.conn, recording_id, min_quality_score=min_quality)
+
+    def _execute_step_curate(self, job: Job):
+        """Dispatch a 'curate' job for a single recording."""
+        from myvoiceclone.pipelines.curate import run_curation
+        payload = job.payload_json
+        recording_id = payload.get("recording_id")
+        if not recording_id:
+            raise ValueError("Payload missing 'recording_id' key")
+        run_curation(self.conn, self.artifact_store, recording_id, job_id=job.id)

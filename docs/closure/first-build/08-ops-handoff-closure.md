@@ -23,11 +23,11 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| MVC-P8-01 | ✅ verified | (commit `MVC-P8-complete` + doc `README.md` / `local-setup.md` + run-time `2026-06-13 11:42 UTC`) |
-| MVC-P8-02 | ✅ verified | (commit `MVC-P8-complete` + test `test_scripts_dry_run.py` + run-time `2026-06-13 11:42 UTC`) |
-| MVC-P8-03 | ✅ verified | (commit `MVC-P8-complete` + doc `compose.yaml` + run-time `2026-06-13 11:42 UTC`) |
-| MVC-P8-04 | ✅ verified | (commit `MVC-P8-complete` + test `test_first_build_journey.py` + run-time `2026-06-13 11:42 UTC`) |
-| MVC-P8-05 | ✅ verified | (commit `MVC-P8-complete` + doc `index.md` + run-time `2026-06-13 11:42 UTC`) |
+| MVC-P8-01 | ✅ verified | (commit `87f77fa` + doc `README.md` / `local-setup.md` + run-time `2026-06-13 11:42 UTC`) |
+| MVC-P8-02 | ✅ verified | (commit `87f77fa` + test `test_scripts_dry_run.py` + run-time `2026-06-13 11:42 UTC`) |
+| MVC-P8-03 | ✅ verified | (commit `87f77fa` + doc `compose.yaml` + run-time `2026-06-13 11:42 UTC`) |
+| MVC-P8-04 | ✅ verified | (commit `87f77fa` + test `test_first_build_journey.py` + run-time `2026-06-13 11:42 UTC`) |
+| MVC-P8-05 | ✅ verified | (commit `87f77fa` + doc `index.md` + run-time `2026-06-13 11:42 UTC`) |
 
 ---
 

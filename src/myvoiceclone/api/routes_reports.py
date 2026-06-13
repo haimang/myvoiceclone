@@ -7,7 +7,12 @@ from myvoiceclone.api.schemas import ReportResponse, ReleaseGateResponse
 from myvoiceclone.storage.repositories import ReportRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.config import load_local_config
-from myvoiceclone.eval.report import generate_baseline_report, generate_train_report, evaluate_long_train_gate
+# V5 fix: replaced direct eval imports with domain service layer
+from myvoiceclone.services import (
+    service_generate_baseline_report,
+    service_generate_train_report,
+    service_evaluate_long_train_gate,
+)
 from pydantic import BaseModel
 
 router = APIRouter(tags=["reports"])
@@ -58,26 +63,25 @@ def get_report(report_id: str, db: sqlite3.Connection = Depends(get_db)):
 
 @router.post("/reports/baseline", response_model=ReportResponse)
 def create_baseline_report(req: BaselineReportCreate, db: sqlite3.Connection = Depends(get_db)):
-    config = load_local_config()
-    artifact_store = ArtifactStore(db, config.get("artifact_root", "data/artifacts"))
     try:
-        return generate_baseline_report(db, artifact_store, req.report_id, req.model_run_ids)
+        # V5 fix: use domain service instead of direct eval call
+        return service_generate_baseline_report(db, req.report_id, req.model_run_ids)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/reports/train", response_model=ReportResponse)
 def create_train_report(req: TrainReportCreate, db: sqlite3.Connection = Depends(get_db)):
-    config = load_local_config()
-    artifact_store = ArtifactStore(db, config.get("artifact_root", "data/artifacts"))
     try:
-        return generate_train_report(db, artifact_store, req.report_id, req.model_run_id)
+        # V5 fix: use domain service instead of direct eval call
+        return service_generate_train_report(db, req.report_id, req.model_run_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/reports/gate")
 def create_gate_report(req: GateReportCreate, db: sqlite3.Connection = Depends(get_db)):
     try:
-        return evaluate_long_train_gate(db, req.dataset_id, req.baseline_report_id)
+        # V5 fix: use domain service instead of direct eval call
+        return service_evaluate_long_train_gate(db, req.dataset_id, req.baseline_report_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

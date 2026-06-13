@@ -4,8 +4,9 @@ from myvoiceclone.domain.entities import TrainRequest
 from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
 
 @pytest.mark.unit
-def test_sovits_adapter_mock_methods(tmp_path):
-    os.environ["MOCK_ADAPTERS"] = "true"
+def test_sovits_adapter_mock_methods(tmp_path, monkeypatch):
+    # V13 fix: monkeypatch.setenv auto-restores MOCK_ADAPTERS after the test
+    monkeypatch.setenv("MOCK_ADAPTERS", "true")
     adapter = SovitsAdapter()
     
     # 1. Test prepare (no throw/error)

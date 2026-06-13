@@ -22,17 +22,24 @@ def get_imports(file_path):
 @pytest.mark.unit
 def test_layer_boundaries():
     src_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "src", "myvoiceclone")
+    # V23 fix: changed from silent `return` to pytest.fail() so missing src dir is detected
     if not os.path.exists(src_dir):
-        # If src/myvoiceclone doesn't exist yet, we pass this test as a placeholder
-        return
+        pytest.fail(f"src/myvoiceclone directory not found at {src_dir} — architecture boundary test cannot run")
 
-    # Rules map a layer subdirectory name to list of forbidden import patterns
+    # Rules map a layer subdirectory name to list of forbidden import patterns.
+    # 'domain' = pure domain model: no I/O, no adapters, no API framework.
+    # 'services' = application service layer: may import all other layers (orchestrator).
+    # 'api' = HTTP layer: must NOT import adapters directly (use services).
+    # 'cli' = CLI layer: must NOT import adapters directly (use services).
+    # 'storage' = persistence layer: no adapters, no API.
+    # 'adapters' = external tool wrappers: no storage, no api.
     forbidden_rules = {
         "domain": ["myvoiceclone.storage", "myvoiceclone.api", "myvoiceclone.adapters", "fastapi", "uvicorn"],
         "storage": ["myvoiceclone.adapters", "myvoiceclone.api", "fastapi", "uvicorn"],
         "adapters": ["myvoiceclone.storage", "myvoiceclone.api"],
-        "api": ["myvoiceclone.adapters"],
-        "cli": ["myvoiceclone.adapters"]
+        "api": ["myvoiceclone.adapters", "myvoiceclone.pipelines", "myvoiceclone.eval"],
+        "cli": ["myvoiceclone.adapters"],
+        # services layer can import anything — it is the orchestrator. No forbidden rules.
     }
 
     violations = []

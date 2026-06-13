@@ -10,6 +10,7 @@ from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.storage.repositories import JobRepository, DatasetRepository, SegmentRepository, ReportRepository, ModelRunRepository
 from myvoiceclone.domain.entities import Job, Dataset, ModelRun
 from myvoiceclone.jobs.runner import JobRunner
+from myvoiceclone.pipelines.export_dataset import run_export_dataset  # V7 fix: was missing, caused NameError at cli.py:200
 
 # No adapter imports here to comply with architecture rules
 
@@ -218,13 +219,11 @@ def train_rvc(dataset: str, profile: str = "quick"):
              
         dataset_id = row["id"]
         
-        from myvoiceclone.pipelines.train import run_train_rvc
-        config = load_local_config()
-        artifact_store = ArtifactStore(conn, config.get("artifact_root", "data/artifacts"))
+        # V6 fix: use domain service instead of direct pipeline import
+        from myvoiceclone.services import service_train_rvc
         
-        run = run_train_rvc(
+        run = service_train_rvc(
              conn=conn,
-             artifact_store=artifact_store,
              dataset_id=dataset_id,
              model_name=f"rvc_{dataset}_{profile}",
              config={"profile": profile}
@@ -247,13 +246,11 @@ def train_sovits(dataset: str, profile: str = "long"):
              
         dataset_id = row["id"]
         
-        from myvoiceclone.pipelines.train import run_train_sovits
-        config = load_local_config()
-        artifact_store = ArtifactStore(conn, config.get("artifact_root", "data/artifacts"))
+        # V6 fix: use domain service instead of direct pipeline import
+        from myvoiceclone.services import service_train_sovits
         
-        run = run_train_sovits(
+        run = service_train_sovits(
              conn=conn,
-             artifact_store=artifact_store,
              dataset_id=dataset_id,
              model_name=f"sovits_{dataset}_{profile}",
              config={"profile": profile, "epochs": 2}

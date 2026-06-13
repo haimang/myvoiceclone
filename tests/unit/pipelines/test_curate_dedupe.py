@@ -69,7 +69,7 @@ def test_curate_deduplication(db_conn, artifact_store, synthetic_wav):
     # Check seg2 status is drop in DB
     seg2_after = seg_repo.get_by_id(seg2.id)
     assert seg2_after.status == "drop"
-    assert "duplicate of" in seg2_after.metadata_json.get("drop_reason", "") or True
+    assert "duplicate of" in seg2_after.metadata_json.get("drop_reason", "")  # V8 fix: removed `or True` that made this assertion always pass
     
     # Check seg1 remains processed
     seg1_after = seg_repo.get_by_id(seg1.id)

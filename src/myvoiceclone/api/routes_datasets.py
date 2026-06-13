@@ -8,7 +8,8 @@ from myvoiceclone.domain.entities import Dataset
 from myvoiceclone.storage.repositories import DatasetRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.config import load_local_config
-from myvoiceclone.pipelines.export_dataset import run_export_dataset
+# V5 fix: replaced direct pipeline import with domain service
+from myvoiceclone.services import service_export_dataset
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -55,17 +56,10 @@ def freeze_dataset(dataset_id: str, db: sqlite3.Connection = Depends(get_db)):
     ds = repo.get_by_id(dataset_id)
     if not ds:
         raise HTTPException(status_code=404, detail="Dataset not found")
-        
-    config = load_local_config()
-    artifact_store = ArtifactStore(db, config.get("artifact_root", "data/artifacts"))
-    
+
     try:
-        frozen_ds = run_export_dataset(
-            conn=db,
-            artifact_store=artifact_store,
-            dataset_id=dataset_id,
-            name=ds.name
-        )
+        # V5 fix: use domain service instead of direct pipeline call
+        frozen_ds = service_export_dataset(conn=db, dataset_id=dataset_id, name=ds.name)
         return frozen_ds
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

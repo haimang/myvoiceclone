@@ -9,7 +9,7 @@ def client(db_conn):
     app.dependency_overrides[get_db] = lambda: db_conn
     return TestClient(app)
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_inference_endpoints_success(client):
     payload = {
         "speaker_id": "spk_target",

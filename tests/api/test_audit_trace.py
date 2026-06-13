@@ -9,7 +9,7 @@ def client(db_conn):
     app.dependency_overrides[get_db] = lambda: db_conn
     return TestClient(app)
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_audit_trace_job_flow(client, db_conn):
     # Setup job
     db_conn.execute(
@@ -54,7 +54,7 @@ def test_audit_trace_job_flow(client, db_conn):
     assert events[2]["type"] == "job_event"
     assert events[3]["type"] == "artifact"
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_audit_trace_missing_404(client):
     res = client.get("/api/audit/trace?subject_id=non_existent_job&subject_type=job")
     assert res.status_code == 404

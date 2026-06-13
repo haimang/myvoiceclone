@@ -12,7 +12,8 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY src/ ./src/
 
-# Install application
-RUN pip install --no-cache-dir .
+# Install application with all required extras
+# V12 fix: must include [cli] for typer, [db] for sqlite-vec, [api] for fastapi, [preprocess] for audio tools
+RUN pip install --no-cache-dir ".[cli,db,api,preprocess,audio]"
 
 ENTRYPOINT ["python", "-m", "myvoiceclone.cli"]

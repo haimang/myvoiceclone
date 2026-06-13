@@ -31,3 +31,19 @@ def load_models_config() -> Dict[str, Any]:
 def load_pipeline_config() -> Dict[str, Any]:
     path = os.path.join(get_project_root(), "configs", "pipelines", "preprocess.default.yaml")
     return load_yaml(path)
+
+
+def resolve_db_path(db_path: str = None) -> str:
+    """Resolve a db_path (possibly relative) to an absolute path from project root.
+
+    V14 fix: Centralizes the db_path resolution logic previously duplicated between
+    cli.py (lines 40-42) and api/dependencies.py (which was missing the resolution).
+    Both CLI and API should call this function.
+    """
+    if db_path is None:
+        config = load_local_config()
+        db_path = config.get("db_path", "db/myvoiceclone.sqlite")
+    if not os.path.isabs(db_path):
+        db_path = os.path.join(get_project_root(), db_path)
+    return db_path
+

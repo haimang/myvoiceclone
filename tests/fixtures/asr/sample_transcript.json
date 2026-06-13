@@ -1,0 +1,8 @@
+{
+  "text": "Hello world, this is a test transcript.",
+  "language": "en",
+  "segments": [
+    {"id": 0, "start": 0.0, "end": 2.0, "text": "Hello world,"},
+    {"id": 1, "start": 2.0, "end": 4.0, "text": "this is a test transcript."}
+  ]
+}

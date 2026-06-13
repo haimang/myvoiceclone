@@ -29,7 +29,7 @@ def setup_gate_test_data(conn):
     conn.execute("INSERT INTO model_runs (id, name, dataset_id, status) VALUES ('gate_run_1', 'Gate Run', 'gate_ds_1', 'completed');")
     conn.commit()
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_create_release_gate_unauthorized(monkeypatch, api_client, db_conn):
     monkeypatch.setattr(
         "myvoiceclone.domain.policies.load_local_config",
@@ -49,7 +49,7 @@ def test_create_release_gate_unauthorized(monkeypatch, api_client, db_conn):
     assert "details_json" in data
     assert "Missing consent" in data["details_json"]["reason"]
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_create_release_gate_authorized(monkeypatch, api_client, db_conn):
     monkeypatch.setattr(
         "myvoiceclone.domain.policies.load_local_config",
@@ -71,7 +71,7 @@ def test_create_release_gate_authorized(monkeypatch, api_client, db_conn):
     assert data["passed"] == 1
     assert "All speakers have granted consent" in data["details_json"]["reason"]
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_waive_release_gate_validation_errors(monkeypatch, api_client, db_conn):
     monkeypatch.setattr(
         "myvoiceclone.domain.policies.load_local_config",
@@ -93,7 +93,7 @@ def test_waive_release_gate_validation_errors(monkeypatch, api_client, db_conn):
     assert res.status_code == 400
     assert "reason is required" in res.json()["detail"]
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_waive_release_gate_success(monkeypatch, api_client, db_conn):
     monkeypatch.setattr(
         "myvoiceclone.domain.policies.load_local_config",
@@ -119,7 +119,7 @@ def test_waive_release_gate_success(monkeypatch, api_client, db_conn):
     assert data["details_json"]["waived"] is True
     assert data["details_json"]["waived_reason"] == "Low risk local debug override"
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_release_gate_not_found(api_client):
     res = api_client.post(
         "/api/reports/release-gates",

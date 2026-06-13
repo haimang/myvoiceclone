@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from myvoiceclone.api.app import create_app
 from myvoiceclone.api.dependencies import get_db
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_app_factory_health():
     app = create_app()
     client = TestClient(app)
@@ -11,7 +11,7 @@ def test_app_factory_health():
     assert response.status_code == 200
     assert response.json() == {"status": "healthy", "version": "1.0.0"}
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_app_factory_db_override():
     app = create_app()
     

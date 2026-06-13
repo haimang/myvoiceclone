@@ -23,13 +23,13 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| MVC-P6-01 | ✅ verified | (commit `MVC-P6-complete` + test `test_app_factory.py` + run-time `2026-06-13 11:32 UTC`) |
-| MVC-P6-02 | ✅ verified | (commit `MVC-P6-complete` + test `test_routes.py` + run-time `2026-06-13 11:32 UTC`) |
-| MVC-P6-03 | ✅ verified | (commit `MVC-P6-complete` + test `test_cli.py` + run-time `2026-06-13 11:32 UTC`) |
-| MVC-P6-04 | ✅ verified | (commit `MVC-P6-complete` + test `test_inference_routes.py` + run-time `2026-06-13 11:32 UTC`) |
-| MVC-P6-05 | ✅ verified | (commit `MVC-P6-complete` + test `test_objective.py` + run-time `2026-06-13 11:32 UTC`) |
-| MVC-P6-06 | ✅ verified | (commit `MVC-P6-complete` + test `test_subjective.py` + run-time `2026-06-13 11:32 UTC`) |
-| MVC-P6-07 | ✅ verified | (commit `MVC-P6-complete` + test `test_audit_trace.py` + run-time `2026-06-13 11:32 UTC`) |
+| MVC-P6-01 | ✅ verified | (commit `87b7e4e` + test `test_app_factory.py` + run-time `2026-06-13 11:32 UTC`) |
+| MVC-P6-02 | ✅ verified | (commit `87b7e4e` + test `test_routes.py` + run-time `2026-06-13 11:32 UTC`) |
+| MVC-P6-03 | ✅ verified | (commit `87b7e4e` + test `test_cli.py` + run-time `2026-06-13 11:32 UTC`) |
+| MVC-P6-04 | ✅ verified | (commit `87b7e4e` + test `test_inference_routes.py` + run-time `2026-06-13 11:32 UTC`) |
+| MVC-P6-05 | ✅ verified | (commit `87b7e4e` + test `test_objective.py` + run-time `2026-06-13 11:32 UTC`) |
+| MVC-P6-06 | ✅ verified | (commit `87b7e4e` + test `test_subjective.py` + run-time `2026-06-13 11:32 UTC`) |
+| MVC-P6-07 | ✅ verified | (commit `87b7e4e` + test `test_audit_trace.py` + run-time `2026-06-13 11:32 UTC`) |
 
 ---
 

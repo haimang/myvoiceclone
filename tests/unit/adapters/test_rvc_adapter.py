@@ -1,12 +1,14 @@
-import os
 import pytest
 from myvoiceclone.domain.entities import TrainRequest, ConvertRequest
 from myvoiceclone.adapters.training.rvc_adapter import RvcAdapter
 
+# V13 fix: Use monkeypatch.setenv instead of os.environ["MOCK_ADAPTERS"] = "true"
+# to ensure automatic cleanup after each test (no env var residue between tests).
+
 @pytest.mark.unit
-def test_rvc_adapter_mock_train():
-    # Force Mock Mode
-    os.environ["MOCK_ADAPTERS"] = "true"
+def test_rvc_adapter_mock_train(monkeypatch):
+    # V13 fix: monkeypatch.setenv auto-restores MOCK_ADAPTERS after the test
+    monkeypatch.setenv("MOCK_ADAPTERS", "true")
     adapter = RvcAdapter()
     
     req = TrainRequest(
@@ -22,8 +24,9 @@ def test_rvc_adapter_mock_train():
     assert result.metrics["loss"] == 0.045
 
 @pytest.mark.unit
-def test_rvc_adapter_mock_convert():
-    os.environ["MOCK_ADAPTERS"] = "true"
+def test_rvc_adapter_mock_convert(monkeypatch):
+    # V13 fix: monkeypatch.setenv auto-restores MOCK_ADAPTERS after the test
+    monkeypatch.setenv("MOCK_ADAPTERS", "true")
     adapter = RvcAdapter()
     
     req = ConvertRequest(

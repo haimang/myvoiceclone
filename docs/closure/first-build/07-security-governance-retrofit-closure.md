@@ -23,10 +23,10 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| MVC-P7-01 | ✅ verified | (commit `MVC-P7-complete` + test `test_policies.py` + run-time `2026-06-13 11:35 UTC`) |
-| MVC-P7-02 | ✅ verified | (commit `MVC-P7-complete` + test `test_release_gate.py` + run-time `2026-06-13 11:35 UTC`) |
-| MVC-P7-03 | ✅ verified | (commit `MVC-P7-complete` + test `test_synthetic_metadata.py` + run-time `2026-06-13 11:35 UTC`) |
-| MVC-P7-04 | ✅ verified | (commit `MVC-P7-complete` + doc `security-governance.md` + run-time `2026-06-13 11:35 UTC`) |
+| MVC-P7-01 | ✅ verified | (commit `94750c8` + test `test_policies.py` + run-time `2026-06-13 11:35 UTC`) |
+| MVC-P7-02 | ✅ verified | (commit `94750c8` + test `test_release_gate.py` + run-time `2026-06-13 11:35 UTC`) |
+| MVC-P7-03 | ✅ verified | (commit `94750c8` + test `test_synthetic_metadata.py` + run-time `2026-06-13 11:35 UTC`) |
+| MVC-P7-04 | ✅ verified | (commit `94750c8` + doc `security-governance.md` + run-time `2026-06-13 11:35 UTC`) |
 
 ---
 

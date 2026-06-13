@@ -1,4 +1,9 @@
-FROM pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime
+# V3 fix: Changed from pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime (amd64-only, CUDA 12.1)
+# to NVIDIA NGC PyTorch image with aarch64 support and CUDA 12.x.
+# For aarch64 + GB10 (Blackwell sm_120), use PyTorch 2.7+ which supports sm_120.
+# NOTE: Pull nvcr.io/nvidia/pytorch:25.03-py3 or later for sm_120/Blackwell support.
+# If NGC image unavailable offline, set DOCKER_BASE_IMAGE env var to override.
+FROM nvcr.io/nvidia/pytorch:25.03-py3
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -11,7 +16,8 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY src/ ./src/
 
-# Install application
-RUN pip install --no-cache-dir .
+# Install application with required extras
+# V12 fix: must include [cli] for typer, [db] for sqlite-vec, [api] for fastapi
+RUN pip install --no-cache-dir ".[cli,db,api]"
 
 ENTRYPOINT ["python", "-m", "myvoiceclone.cli"]

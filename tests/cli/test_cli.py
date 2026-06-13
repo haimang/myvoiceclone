@@ -6,13 +6,13 @@ from myvoiceclone.config import get_project_root
 
 runner = CliRunner()
 
-@pytest.mark.unit
+@pytest.mark.cli
 def test_cli_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "MyVoiceClone CLI" in result.output
 
-@pytest.mark.unit
+@pytest.mark.cli
 def test_cli_init_db(tmp_path):
     db_file = tmp_path / "cli_test.db"
     result = runner.invoke(app, ["init-db", "--db", str(db_file)])
@@ -20,7 +20,7 @@ def test_cli_init_db(tmp_path):
     assert "Initializing database" in result.output
     assert os.path.exists(str(db_file))
 
-@pytest.mark.unit
+@pytest.mark.cli
 def test_cli_vec_health_error(monkeypatch):
     import sqlite3
     def mock_get_connection(*args, **kwargs):
@@ -31,7 +31,7 @@ def test_cli_vec_health_error(monkeypatch):
     assert result.exit_code == 1
     assert "Error" in result.output
 
-@pytest.mark.unit
+@pytest.mark.cli
 def test_cli_ingest_dry_run():
     result = runner.invoke(app, ["ingest", "fake_path.wav", "--dry-run"])
     assert result.exit_code == 0

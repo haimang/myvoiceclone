@@ -10,7 +10,7 @@ def api_client(db_conn):
     app.dependency_overrides[get_db] = lambda: db_conn
     return TestClient(app)
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_recordings_endpoints(api_client, db_conn):
     # Pre-populate recording
     db_conn.execute(
@@ -38,7 +38,7 @@ def test_recordings_endpoints(api_client, db_conn):
     assert res3.json()["name"] == "ingest"
     assert res3.json()["status"] == "pending"
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_segments_endpoints(api_client, db_conn):
     # Pre-populate data
     db_conn.execute(
@@ -75,7 +75,7 @@ def test_segments_endpoints(api_client, db_conn):
     assert row["reason"] == "good audio quality"
     assert row["reviewer"] == "admin"
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_datasets_endpoints(api_client, db_conn, artifact_store):
     # Pre-populate segments with clean artifact
     db_conn.execute(
@@ -108,7 +108,7 @@ def test_datasets_endpoints(api_client, db_conn, artifact_store):
     assert res2.json()["status"] == "frozen"
     assert res2.json()["manifest_sha256"] is not None
 
-@pytest.mark.unit
+@pytest.mark.api
 def test_jobs_endpoints(api_client, db_conn):
     # Pre-populate job
     db_conn.execute(

@@ -1,3 +1,25 @@
+# myvoiceclone Docker Compose Configuration
+#
+# V11 note: This compose file requires the NVIDIA Container Toolkit on aarch64 hosts.
+# Installation: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+# On Ubuntu 22.04+ aarch64:
+#   distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+#   curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+#   curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | \
+#     sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+#     sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+#   sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+#   sudo nvidia-ctk runtime configure --runtime=docker
+#   sudo systemctl restart docker
+#
+# V3 note: Dockerfile.train now uses nvcr.io/nvidia/pytorch:25.03-py3 for aarch64 + Blackwell support.
+# V13 note: compose.yaml commands reference placeholder data; for real usage:
+#   1. Run `mvc init-db` first to create the database
+#   2. Run `mvc ingest /path/to/real.wav` to add real audio
+#   3. Create and freeze a dataset before running train
+#
+# V13 note: data/raw/sample.wav is a placeholder path. Provide a real WAV file via volume mount.
+
 services:
   preprocess:
     build:
@@ -10,6 +32,9 @@ services:
     environment:
       - DB_PATH=${DB_PATH:-db/myvoiceclone.sqlite}
       - ARTIFACT_ROOT=${ARTIFACT_ROOT:-data/artifacts}
+      - MOCK_ADAPTERS=${MOCK_ADAPTERS:-true}
+    # NOTE: /app/data/raw/sample.wav must be provided via the volume mount above.
+    # For quick testing, copy any WAV file to data/raw/sample.wav on the host.
     command: ["ingest", "/app/data/raw/sample.wav"]
 
   train:
@@ -25,6 +50,8 @@ services:
       - DB_PATH=${DB_PATH:-db/myvoiceclone.sqlite}
       - ARTIFACT_ROOT=${ARTIFACT_ROOT:-data/artifacts}
       - MODELS_DIR=${MODELS_DIR:-models}
+      - MOCK_ADAPTERS=${MOCK_ADAPTERS:-true}
+    # V11: requires nvidia-container-toolkit installed and configured (see header above)
     deploy:
       resources:
         reservations:
@@ -32,4 +59,6 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    # NOTE: 'my_dataset' must be created and frozen before running this service.
+    # Run: mvc dataset create my_dataset && mvc dataset freeze my_dataset
     command: ["train", "sovits", "--dataset", "my_dataset"]
