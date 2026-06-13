@@ -132,3 +132,49 @@ class TranscriptSegment:
 class SeparationResult:
     cleaned_path: str
 
+
+@dataclass
+class TrainRequest:
+    dataset_id: str
+    model_name: str
+    config: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class TrainResult:
+    model_run_id: str
+    status: str  # 'completed', 'failed'
+    checkpoint_bytes: bytes
+    metrics: Dict[str, float] = field(default_factory=dict)
+    error_msg: Optional[str] = None
+
+
+@dataclass
+class SynthRequest:
+    text: str
+    speaker_id: str
+    config: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class SynthResult:
+    status: str  # 'completed', 'failed'
+    audio_bytes: bytes
+    duration_sec: float
+    error_msg: Optional[str] = None
+
+
+@dataclass
+class ConvertRequest:
+    model_run_id: str
+    source_audio_path: str
+    config: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ConvertResult:
+    status: str  # 'completed', 'failed'
+    audio_bytes: bytes
+    duration_sec: float
+    error_msg: Optional[str] = None
+

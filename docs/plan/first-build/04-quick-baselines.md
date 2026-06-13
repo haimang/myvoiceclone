@@ -332,3 +332,16 @@ P4 Quick Baselines
 ### 10.4 NOT-成功识别
 
 未使用 frozen manifest、report 不入库、或 gate 缺失 false/degraded reason，不得标 `executed`。
+
+
+## 11. 工作日志
+
+- **2026-06-13**:
+  - 重新梳理了 P4 Action-plan 背景与具体需求，梳理了 DTO 与分层规范。
+  - 在 `src/myvoiceclone/domain/entities.py` 中添加了 `TrainRequest`, `TrainResult`, `SynthRequest`, `SynthResult`, `ConvertRequest`, `ConvertResult` DTO 实体。
+  - 创建并实现了 `src/myvoiceclone/adapters/training/rvc_adapter.py` 和 `xtts_adapter.py`，提供 mock 支持。
+  - 编写并实现 `src/myvoiceclone/pipelines/train.py`，建立了 RVC 和 XTTS 训练/合成流水线，实现 dataset 冻结状态校验与 artifacts 自动化注册。
+  - 扩展了 `src/myvoiceclone/eval/report.py`，实现 `generate_eval_pack`, `generate_baseline_report` 和 `evaluate_long_train_gate`。
+  - 编写了完整的测试套件 `test_rvc_adapter.py`, `test_xtts_adapter.py`, `test_train.py` 与 `test_baseline_report.py`。
+  - 运行并跑通了所有 50 项单元测试，没有出现任何退化和冲突。
+
