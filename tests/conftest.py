@@ -16,7 +16,6 @@ def synthetic_wav(tmp_path_factory):
     with wave.open(wav_path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2) # 16-bit
-        w.setsampwidth(2)
         w.setframerate(16000)
         # 1 second of silence
         data = struct.pack("<16000h", *[0]*16000)

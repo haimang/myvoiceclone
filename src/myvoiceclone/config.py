@@ -1,6 +1,6 @@
 import os
 import yaml
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 def get_project_root() -> str:
     # Walk up from current file to find the root containing pyproject.toml
@@ -33,8 +33,14 @@ def load_pipeline_config() -> Dict[str, Any]:
     return load_yaml(path)
 
 
-def resolve_db_path(db_path: str = None) -> str:
-    """Resolve a db_path (possibly relative) to an absolute path from project root.
+def _resolve_project_path(path: str) -> str:
+    if not os.path.isabs(path):
+        return os.path.join(get_project_root(), path)
+    return path
+
+
+def resolve_db_path(db_path: Optional[str] = None) -> str:
+    """Resolve the SQLite DB path, honoring DB_PATH before local.yaml.
 
     V14 fix: Centralizes the db_path resolution logic previously duplicated between
     cli.py (lines 40-42) and api/dependencies.py (which was missing the resolution).
@@ -42,8 +48,21 @@ def resolve_db_path(db_path: str = None) -> str:
     """
     if db_path is None:
         config = load_local_config()
-        db_path = config.get("db_path", "db/myvoiceclone.sqlite")
-    if not os.path.isabs(db_path):
-        db_path = os.path.join(get_project_root(), db_path)
-    return db_path
+        db_path = os.environ.get("DB_PATH") or config.get("db_path", "db/myvoiceclone.sqlite")
+    return _resolve_project_path(db_path)
 
+
+def resolve_artifact_root(artifact_root: Optional[str] = None) -> str:
+    """Resolve artifact storage root, honoring ARTIFACT_ROOT before local.yaml."""
+    if artifact_root is None:
+        config = load_local_config()
+        artifact_root = os.environ.get("ARTIFACT_ROOT") or config.get("artifact_root", "data/artifacts")
+    return _resolve_project_path(artifact_root)
+
+
+def resolve_models_dir(models_dir: Optional[str] = None) -> str:
+    """Resolve model storage root, honoring MODELS_DIR before local.yaml."""
+    if models_dir is None:
+        config = load_local_config()
+        models_dir = os.environ.get("MODELS_DIR") or config.get("models_dir", "models")
+    return _resolve_project_path(models_dir)

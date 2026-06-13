@@ -38,7 +38,7 @@ def test_layer_boundaries():
         "storage": ["myvoiceclone.adapters", "myvoiceclone.api", "fastapi", "uvicorn"],
         "adapters": ["myvoiceclone.storage", "myvoiceclone.api"],
         "api": ["myvoiceclone.adapters", "myvoiceclone.pipelines", "myvoiceclone.eval"],
-        "cli": ["myvoiceclone.adapters"],
+        "cli": ["myvoiceclone.adapters", "myvoiceclone.pipelines", "myvoiceclone.eval"],
         # services layer can import anything — it is the orchestrator. No forbidden rules.
     }
 

@@ -22,7 +22,7 @@ import logging
 from typing import Optional, Dict, Any
 
 from myvoiceclone.storage.artifact_store import ArtifactStore
-from myvoiceclone.config import load_local_config, resolve_db_path
+from myvoiceclone.config import resolve_artifact_root
 from myvoiceclone.storage.sqlite import get_connection
 
 logger = logging.getLogger("myvoiceclone.domain.services")
@@ -34,8 +34,7 @@ logger = logging.getLogger("myvoiceclone.domain.services")
 
 def _make_artifact_store(conn: sqlite3.Connection) -> ArtifactStore:
     """Create an ArtifactStore with config-resolved artifact root."""
-    config = load_local_config()
-    return ArtifactStore(conn, config.get("artifact_root", "data/artifacts"))
+    return ArtifactStore(conn, resolve_artifact_root())
 
 
 # ─────────────────────────────────────────────────────────────────────────────

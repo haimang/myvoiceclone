@@ -3,14 +3,14 @@ import sqlite3
 import uuid
 import typer
 from typing import Optional, List
-from myvoiceclone.config import load_local_config, get_project_root
+from myvoiceclone.config import resolve_artifact_root, resolve_db_path
 from myvoiceclone.storage.sqlite import get_connection
 from myvoiceclone.storage.migrations import run_migrations
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.storage.repositories import JobRepository, DatasetRepository, SegmentRepository, ReportRepository, ModelRunRepository
 from myvoiceclone.domain.entities import Job, Dataset, ModelRun
+from myvoiceclone.domain.states import DatasetStatus, JobStatus, SegmentStatus
 from myvoiceclone.jobs.runner import JobRunner
-from myvoiceclone.pipelines.export_dataset import run_export_dataset  # V7 fix: was missing, caused NameError at cli.py:200
 
 # No adapter imports here to comply with architecture rules
 
@@ -35,22 +35,14 @@ report_app = typer.Typer(help="Show or audit reports")
 app.add_typer(report_app, name="report")
 
 def get_db_conn():
-    config = load_local_config()
-    db_path = config.get("db_path", "db/myvoiceclone.sqlite")
-    # Resolve relative path from project root
-    if not os.path.isabs(db_path):
-        db_path = os.path.join(get_project_root(), db_path)
-    return get_connection(db_path, load_vec=True)
+    return get_connection(resolve_db_path(), load_vec=True)
 
 @app.command("init-db")
 def init_db(db: Optional[str] = typer.Option(None, help="Database path")):
-    config = load_local_config()
-    db_path = db or config.get("db_path", "db/myvoiceclone.sqlite")
-    if not os.path.isabs(db_path):
-        db_path = os.path.join(get_project_root(), db_path)
+    db_path = resolve_db_path(db)
         
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    migrations_dir = os.path.join(get_project_root(), "db", "migrations")
+    migrations_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "db", "migrations")
     
     typer.echo(f"Initializing database at: {db_path}")
     run_migrations(db_path, migrations_dir)
@@ -82,15 +74,14 @@ def ingest(filepath: str, dry_run: bool = typer.Option(False, "--dry-run", help=
     try:
         job_repo = JobRepository(conn)
         job_id = f"job_{uuid.uuid4().hex[:12]}"
-        job = Job(id=job_id, name="ingest", status="pending", payload_json={"filepath": filepath})
+        job = Job(id=job_id, name="ingest", status=JobStatus.PENDING.value, payload_json={"filepath": filepath})
         job_repo.save(job)
         conn.commit()
         
         typer.echo(f"Created ingest job: {job_id}")
         
         # Run it synchronously
-        config = load_local_config()
-        artifact_store = ArtifactStore(conn, config.get("artifact_root", "data/artifacts"))
+        artifact_store = ArtifactStore(conn, resolve_artifact_root())
         runner = JobRunner(conn, artifact_store)
         runner.run(job_id)
         
@@ -107,14 +98,13 @@ def _run_step_job(name: str, payload: dict):
     try:
         job_repo = JobRepository(conn)
         job_id = f"job_{uuid.uuid4().hex[:12]}"
-        job = Job(id=job_id, name=name, status="pending", payload_json=payload)
+        job = Job(id=job_id, name=name, status=JobStatus.PENDING.value, payload_json=payload)
         job_repo.save(job)
         conn.commit()
         
         typer.echo(f"Created job {name}: {job_id}")
         
-        config = load_local_config()
-        artifact_store = ArtifactStore(conn, config.get("artifact_root", "data/artifacts"))
+        artifact_store = ArtifactStore(conn, resolve_artifact_root())
         runner = JobRunner(conn, artifact_store)
         runner.run(job_id)
         typer.echo(f"Job {job_id} completed successfully.")
@@ -122,7 +112,7 @@ def _run_step_job(name: str, payload: dict):
         conn.close()
 
 @curate_app.command("list")
-def curate_list(status: str = typer.Option("needs_review", help="Filter segments by status")):
+def curate_list(status: str = typer.Option(SegmentStatus.NEEDS_REVIEW.value, help="Filter segments by status")):
     conn = get_db_conn()
     try:
         cursor = conn.cursor()
@@ -162,12 +152,12 @@ def curate_mark(segment_id: str, status: str = typer.Option(..., help="New statu
         conn.close()
 
 @dataset_app.command("create")
-def dataset_create(name: str, filter_status: str = typer.Option("keep", help="Status filter for segments")):
+def dataset_create(name: str, filter_status: str = typer.Option(SegmentStatus.KEEP.value, help="Status filter for segments")):
     conn = get_db_conn()
     try:
         repo = DatasetRepository(conn)
         ds_id = f"ds_{uuid.uuid4().hex[:12]}"
-        ds = Dataset(id=ds_id, name=name, status="active", filter_json={"status": filter_status})
+        ds = Dataset(id=ds_id, name=name, status=DatasetStatus.ACTIVE.value, filter_json={"status": filter_status})
         
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM segments WHERE status = ? AND cleaned_artifact_id IS NOT NULL;", (filter_status,))
@@ -195,10 +185,9 @@ def dataset_freeze(name: str):
             raise typer.Exit(code=1)
             
         dataset_id = row["id"]
-        config = load_local_config()
-        artifact_store = ArtifactStore(conn, config.get("artifact_root", "data/artifacts"))
-        
-        frozen_ds = run_export_dataset(conn, artifact_store, dataset_id, name=name)
+        from myvoiceclone.services import service_export_dataset
+
+        frozen_ds = service_export_dataset(conn=conn, dataset_id=dataset_id, name=name)
         typer.echo(f"Dataset '{name}' frozen successfully. Manifest checksum: {frozen_ds.manifest_sha256}")
     finally:
         conn.close()
@@ -334,5 +323,9 @@ def audit(recording_id: str):
     finally:
         conn.close()
 
-if __name__ == "__main__":
+
+def main():
     app()
+
+if __name__ == "__main__":
+    main()
