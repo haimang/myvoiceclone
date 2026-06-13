@@ -42,6 +42,9 @@ datasets/
 raw_data/
 preprocess/out/
 preprocess/in/
+data/
+db/*.sqlite
+db/*.db
 
 # Model Checkpoints & Weights
 *.pth

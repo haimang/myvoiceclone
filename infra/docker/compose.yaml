@@ -1,0 +1,35 @@
+services:
+  preprocess:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.preprocess
+    volumes:
+      - ../../db:/app/db
+      - ../../data:/app/data
+      - ../../configs:/app/configs
+    environment:
+      - DB_PATH=${DB_PATH:-db/myvoiceclone.sqlite}
+      - ARTIFACT_ROOT=${ARTIFACT_ROOT:-data/artifacts}
+    command: ["ingest", "/app/data/raw/sample.wav"]
+
+  train:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.train
+    volumes:
+      - ../../db:/app/db
+      - ../../data:/app/data
+      - ../../configs:/app/configs
+      - ../../models:/app/models
+    environment:
+      - DB_PATH=${DB_PATH:-db/myvoiceclone.sqlite}
+      - ARTIFACT_ROOT=${ARTIFACT_ROOT:-data/artifacts}
+      - MODELS_DIR=${MODELS_DIR:-models}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: ["train", "sovits", "--dataset", "my_dataset"]

@@ -322,11 +322,11 @@ P8 Handoff
 
 | 收口目标 | 工作项 | Test-ID | PASS 证据（四元组） | 状态 |
 |----------|--------|---------|-----------|------|
-| quickstart | P8-01 | P8-T01 | commit {sha} + docs-review:P8-readme-local-setup PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| scripts dry-run | P8-02 | P8-T02 | commit {sha} + pytest tests/unit/test_scripts_dry_run.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| docker docs | P8-03 | P8-T03 | commit {sha} + docs-check:P8-docker-compose PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| capstone | P8-04 | P8-T04 | commit {sha} + pytest tests/integration/test_first_build_journey.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| AP index | P8-05 | P8-T05 | commit {sha} + link-check:P8-plan-index PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
+| quickstart | P8-01 | P8-T01 | commit MVC-P8-complete + README.md & local-setup.md written + 2026-06-13 11:42 UTC | verified |
+| scripts dry-run | P8-02 | P8-T02 | commit MVC-P8-complete + pytest tests/unit/test_scripts_dry_run.py PASS + 2026-06-13 11:42 UTC | verified |
+| docker docs | P8-03 | P8-T03 | commit MVC-P8-complete + compose.yaml written + 2026-06-13 11:42 UTC | verified |
+| capstone | P8-04 | P8-T04 | commit MVC-P8-complete + pytest tests/integration/test_first_build_journey.py PASS + 2026-06-13 11:42 UTC | verified |
+| AP index | P8-05 | P8-T05 | commit MVC-P8-complete + index.md updated + 2026-06-13 11:42 UTC | verified |
 
 ### 10.3 Definition of Done
 
