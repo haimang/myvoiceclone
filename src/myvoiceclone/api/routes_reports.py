@@ -124,7 +124,7 @@ def create_subjective_report(req: SubjectiveReportCreate, db: sqlite3.Connection
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/reports/gate")
+@router.post("/reports/gate", response_model=Dict[str, Any])
 def create_gate_report(req: GateReportCreate, db: sqlite3.Connection = Depends(get_db)):
     try:
         # V5 fix: use domain service instead of direct eval call
@@ -227,7 +227,7 @@ def get_release_gate(gate_id: str, db: sqlite3.Connection = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Release gate not found")
     return parse_gate_row(row)
 
-@router.get("/audit/trace")
+@router.get("/audit/trace", response_model=Dict[str, Any])
 def get_audit_trace(subject_id: str, subject_type: str, db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
     trace_events = []

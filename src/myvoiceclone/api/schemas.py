@@ -172,3 +172,15 @@ class ReleaseGateResponse(BaseModel):
     approved_at: Optional[datetime] = None
     details_json: Dict[str, Any] = {}
     decision_json: Dict[str, Any] = {}
+
+
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    trace_id: str
+    detail: Dict[str, Any] = {}
+
+
+class ErrorResponse(BaseModel):
+    error: ErrorDetail
+    detail: Any = None
