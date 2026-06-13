@@ -300,27 +300,136 @@
 ## 6. 处置执行回填（fixes 落地后 · append-only）
 
 > 本节 append-only，不改写 §0–§5。
+> **修复批次 commit**：`144ddba` · 2026-06-13
 
 ### 6.1 逐项处置结果表
 
-<!-- 实现者执行后填入 -->
-*（待修复完成后填入）*
+| V# | 处置结果 | 修复摘要 | 关键证据 |
+|----|----------|---------|---------|
+| V1 | ✅ `fixed` | `db/migrations/007_reconcile_to_plan.sql`（234 行）添加 12 张表的缺失列、status CHECK、兼容 VIEW | migration 应用测试通过 |
+| V2 | ⚠️ `partial-fix` | migration 007 中 datasets/embedding_models 已补列；vec0 维度 128→正确值 defer → DEF-01 | DEF-01 登记 |
+| V3 | ✅ `fixed` | `Dockerfile.train:1` → `nvcr.io/nvidia/pytorch:25.03-py3` | grep 验证 |
+| V4 | ✅ `fixed` | `tests/api/*.py` → `@pytest.mark.api`；`tests/cli/*.py` → `@pytest.mark.cli` | `pytest -m api` → 14 passed；`-m cli` → 4 passed |
+| V5 | ✅ `fixed` | `api/routes_*.py` 移除 pipelines/eval 直接 import；改用 `myvoiceclone.services` | `grep` → 0 命中；architecture test PASSED |
+| V6 | ✅ `fixed` | `cli.py:221,250` 改用 `from myvoiceclone.services import service_train_*` | `grep` → 0 命中 |
+| V7 | ✅ `fixed` | `cli.py` 顶层加 `from myvoiceclone.pipelines.export_dataset import run_export_dataset` | NameError 不再触发 |
+| V8 | ✅ `fixed` | `test_curate_dedupe.py:72` 删除 `or True`；`curate.py:update_segment_status()` 将 `drop_reason` 写入 `metadata_json` | 测试通过 |
+| V9 | ✅ `fixed` | `torchaudio_io.py` 返回 `AudioProbe(duration_sec, sample_rate, channels)` DTO；`entities.py` 新增 `AudioProbe` | DTO 契约测试通过 |
+| V10 | ⚠️ `partial-fix` | `tests/fixtures/{audio,diarization,asr,embeddings}/` + `tests/fakes/__init__.py`（6 stub fakes）创建 | ls 验证；fakes 完整实现 → DEF-02 |
+| V11 | ✅ `fixed` | `compose.yaml` 新增 nvidia-container-toolkit 安装说明（12 行注释）| 文档内容验证 |
+| V12 | ✅ `fixed` | `Dockerfile.preprocess` → `pip install ".[cli,db,api,preprocess,audio]"`；`Dockerfile.train` → `".[cli,db,api]"` | grep 验证 |
+| V13 | ✅ `fixed` | `test_rvc_adapter.py`、`test_xtts_adapter.py`、`test_sovits_adapter.py` 改用 `monkeypatch.setenv` | 测试 pass 后 env 不残留 |
+| V14 | ✅ `fixed` | `config.py` 新增 `resolve_db_path()`；`api/dependencies.py` 使用此函数 | CLI+API 同一 db_path 解析逻辑 |
+| V15 | ✅ `fixed` | `domain/states.py` 扩展为 7 个状态机（39+ enum 值）覆盖 plan §14.4；新增 `RUNNING` 状态 | 文件扩展；pipeline 可 import 使用 |
+| V16 | ⚠️ `partial-fix` | `runner.py` 补齐 6 步 per-step dispatch（diarize/slice/clean/transcribe/score/curate）；完整 14 种 → DEF-03 | dispatch test 逻辑验证 |
+| V17 | 📋 `deferred` | 幂等性保护依赖完整状态机 → DEF-04 | |
+| V18 | 📋 `deferred` | 真实 embedder 依赖 GPU 环境 → DEF-05 | |
+| V19 | 📋 `deferred` | 真实 scorer 依赖 DNSMOS → DEF-06 | |
+| V20 | ✅ `fixed` | P6/P7/P8 closure §1 commit 字段替换为真实 SHA（87b7e4e/94750c8/87f77fa）| `git show <SHA>` 可核对 |
+| V21 | 📋 `deferred` | WAL 并发写测试 → DEF-07 | |
+| V22 | 📋 `deferred` | 主观评估依赖真实合成 → DEF-08 | |
+| V23 | ✅ `fixed` | `test_architecture_boundaries.py:24` 改为 `pytest.fail()` | missing dir → fail not pass |
 
-### 6.2 Blocker / Follow-up 状态汇总
+### 6.2 Blocker 状态汇总
 
-*（待修复完成后填入）*
+| Blocker | fix 前状态 | fix 后状态 |
+|---------|-----------|-----------|
+| V1 (DB schema 漂移) | ❌ 12 表缺列/错 CHECK | ✅ migration 007 完全修复 |
+| V3 (Dockerfile aarch64) | ❌ amd64-only base image | ✅ NGC 25.03-py3 |
+| V5 (API layer violations) | ❌ 3 routes 直接 import pipelines/eval | ✅ 0 violations |
+| V7 (CLI NameError) | ❌ dataset freeze 崩溃 | ✅ import 已修复 |
+| V8 (assert or True) | ❌ 断言永真 | ✅ 真实断言；实现 drop_reason |
+| V12 (Dockerfile extras) | ❌ typer/sqlite-vec 缺失 | ✅ 全量 extras 安装 |
+| V13 (env 污染) | ❌ os.environ 赋值无清理 | ✅ monkeypatch 全覆盖 |
 
 ### 6.3 变更文件清单
 
-*（待修复完成后填入）*
+```
+db/migrations/007_reconcile_to_plan.sql             [new] V1
+docs/closure/first-build/06-eval-inference-api-closure.md  [mod] V20
+docs/closure/first-build/07-security-governance-retrofit-closure.md  [mod] V20
+docs/closure/first-build/08-ops-handoff-closure.md  [mod] V20
+docs/code-review/first-build/P0-P8-review-VF-ledger.md  [new] ledger
+docs/closure/first-build/deferred-items-ledger.md   [new] DEF-01~08
+infra/docker/Dockerfile.preprocess                  [mod] V12
+infra/docker/Dockerfile.train                       [mod] V3,V12
+infra/docker/compose.yaml                           [mod] V11
+src/myvoiceclone/adapters/audio/torchaudio_io.py    [mod] V9
+src/myvoiceclone/api/dependencies.py                [mod] V14
+src/myvoiceclone/api/routes_datasets.py             [mod] V5
+src/myvoiceclone/api/routes_inference.py            [mod] V5
+src/myvoiceclone/api/routes_reports.py              [mod] V5
+src/myvoiceclone/cli.py                             [mod] V6,V7
+src/myvoiceclone/config.py                          [mod] V14
+src/myvoiceclone/domain/entities.py                 [mod] V9
+src/myvoiceclone/domain/services.py                 [new] shim → services/
+src/myvoiceclone/domain/states.py                   [mod] V15
+src/myvoiceclone/jobs/runner.py                     [mod] V16
+src/myvoiceclone/pipelines/curate.py               [mod] V8
+src/myvoiceclone/services/__init__.py               [new] V5,V6
+tests/api/test_app_factory.py                       [mod] V4
+tests/api/test_audit_trace.py                       [mod] V4
+tests/api/test_inference_routes.py                  [mod] V4
+tests/api/test_release_gate.py                      [mod] V4
+tests/api/test_routes.py                            [mod] V4
+tests/cli/test_cli.py                               [mod] V4
+tests/fakes/__init__.py                             [new] V10
+tests/fixtures/asr/sample_transcript.json           [new] V10
+tests/fixtures/audio/tone_16k.wav                   [new] V10
+tests/fixtures/diarization/sample_turns.json        [new] V10
+tests/fixtures/embeddings/sample_speaker_embeddings.json  [new] V10
+tests/unit/adapters/test_rvc_adapter.py             [mod] V13
+tests/unit/adapters/test_sovits_adapter.py          [mod] V13
+tests/unit/adapters/test_xtts_adapter.py            [mod] V13
+tests/unit/pipelines/test_curate_dedupe.py          [mod] V8
+tests/unit/test_architecture_boundaries.py          [mod] V23
+```
 
 ### 6.4 验证结果
 
-*（待修复完成后填入）*
+```
+$ MOCK_ADAPTERS=true pytest -q
+92 passed, 1 skipped, 0 failed in 6.01s
+
+$ pytest -m api -q
+14 passed, 79 deselected
+
+$ pytest -m cli -q
+4 passed, 89 deselected
+
+$ pytest -m integration -q
+1 passed, 92 deselected
+
+$ pytest tests/unit/test_architecture_boundaries.py -v
+PASSED (0 violations)
+
+$ grep "from myvoiceclone.pipelines|from myvoiceclone.eval|from myvoiceclone.adapters" \
+       src/myvoiceclone/api/*.py
+(no output — 0 violations)
+```
 
 ### 6.5 残留与下一轮 entry
 
-*（待修复完成后填入）*
+**残留 partial-fix**：
+
+| V# | 残留切片 | 台账 entry |
+|----|---------|-----------|
+| V2.r | vec0 维度 128 → 768/192/384 | DEF-01 |
+| V10.r | fakes 完整实现（非 stub）| DEF-02 |
+| V16.r | runner dispatch 完整 14 种 | DEF-03 |
+
+**台账关闭条件**：
+
+所有 `[true-bug]` 和 `[partial-delivery]` 项均已 fix 或登记至 `deferred-items-ledger.md`。本台账视为 **first-build 轮次关闭**。
+
+---
+
+## 修订历史
+
+| 版本 | 日期 | 作者 | 变更 |
+|------|------|------|------|
+| `v0.1` | `2026-06-13` | `Antigravity` | 初次合并：2 方 44 条 finding → 23 条统一项；triaged |
+| `v1.0` | `2026-06-13` | `Antigravity` | 修复落地：14 fix + 4 partial-fix + 5 defer；commit `144ddba`；92 passed |
 
 ---
 
