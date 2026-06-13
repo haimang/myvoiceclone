@@ -52,7 +52,10 @@ def run_clean(
                 job_id=job_id,
                 metadata_json={
                     "segment_id": seg.id,
-                    "denoised": True
+                    "denoised": True,
+                    "separation_smoke": True,
+                    "quality_claim": "not_speech_enhancement",
+                    **clean_adapter.metadata(),
                 }
             )
             
@@ -64,6 +67,7 @@ def run_clean(
         except Exception as e:
             # Failure does not delete original segment audio. We mark status but preserve seg info.
             seg.status = SegmentStatus.CLEAN_FAILED.value
+            seg.metadata_json["clean_error"] = str(e)
             seg_repo.save(seg)
             
     conn.commit()

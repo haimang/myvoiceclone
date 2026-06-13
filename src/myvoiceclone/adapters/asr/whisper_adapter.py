@@ -1,10 +1,32 @@
 import os
+import shutil
 from typing import List
 from myvoiceclone.domain.entities import TranscriptSegment
 
 class WhisperAdapter:
     def __init__(self, model_id: str = "medium"):
         self.model_id = model_id
+
+    def metadata(self) -> dict:
+        return {
+            "tool": "openai-whisper",
+            "model": self.model_id,
+            "version": None,
+            "device": "cuda-or-cpu",
+            "cache": os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache/whisper"),
+            "license": "MIT",
+        }
+
+    def preflight(self) -> dict:
+        if os.getenv("MOCK_ADAPTERS", "true").lower() == "true":
+            return {"available": True, "mode": "mock", "skip_reason": None, **self.metadata()}
+        if not shutil.which("ffmpeg"):
+            return {"available": False, "mode": "real", "skip_reason": "ffmpeg binary required by Whisper is not available", **self.metadata()}
+        try:
+            import whisper  # noqa: F401
+        except Exception as exc:
+            return {"available": False, "mode": "real", "skip_reason": f"whisper import failed: {exc}", **self.metadata()}
+        return {"available": True, "mode": "real", "skip_reason": None, **self.metadata()}
 
     def transcribe(self, filepath: str) -> List[TranscriptSegment]:
         if os.getenv("MOCK_ADAPTERS", "true").lower() == "true":
@@ -14,6 +36,9 @@ class WhisperAdapter:
             ]
             
         # Real implementation
+        preflight = self.preflight()
+        if not preflight["available"]:
+            raise RuntimeError(preflight["skip_reason"])
         import whisper
         model = whisper.load_model(self.model_id)
         result = model.transcribe(filepath)

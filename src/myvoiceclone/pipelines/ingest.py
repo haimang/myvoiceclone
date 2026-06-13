@@ -62,7 +62,10 @@ def run_ingest(
         metadata_json={
             "original_duration_sec": probe_info.duration_sec,
             "original_sample_rate": probe_info.sample_rate,
-            "original_channels": probe_info.channels
+            "original_channels": probe_info.channels,
+            "input_format": probe_info.format,
+            "smoke_metrics": ffmpeg_adapter.smoke_metrics(filepath),
+            **ffmpeg_adapter.metadata(),
         }
     )
     
@@ -86,7 +89,13 @@ def run_ingest(
         metadata_json={
             "duration_sec": probe_info.duration_sec,
             "sample_rate": 16000,
-            "channels": 1
+            "channels": 1,
+            "normalization": {
+                "target_sample_rate": 16000,
+                "target_channels": 1,
+                "target_codec": "pcm_s16le",
+            },
+            **ffmpeg_adapter.metadata(),
         }
     )
     

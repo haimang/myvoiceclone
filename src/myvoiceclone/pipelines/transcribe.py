@@ -51,7 +51,10 @@ def run_transcribe(
                 parent_artifact_id=clean_art.id,
                 job_id=job_id,
                 metadata_json={
-                    "segment_id": seg.id
+                    "segment_id": seg.id,
+                    "duration_sec": seg.end_sec - seg.start_sec,
+                    "segment_count": len(transcript_segs),
+                    **asr_adapter.metadata(),
                 }
             )
             
@@ -67,6 +70,7 @@ def run_transcribe(
             
         except Exception as e:
             seg.status = SegmentStatus.TRANSCRIBE_FAILED.value
+            seg.metadata_json["transcribe_error"] = str(e)
             seg_repo.save(seg)
             
     conn.commit()

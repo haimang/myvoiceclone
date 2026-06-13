@@ -47,7 +47,12 @@ def run_diarize(
         content=turns_bytes,
         artifact_type="diarized",
         parent_artifact_id=normalized_art.id,
-        job_id=job_id
+        job_id=job_id,
+        metadata_json={
+            "recording_id": recording_id,
+            "turn_count": len(turns),
+            **diarize_adapter.metadata(),
+        },
     )
     
     segments = []
@@ -74,7 +79,8 @@ def run_diarize(
             transcript=None,
             status=SegmentStatus.DRAFT.value,
             metadata_json={
-                "turns_artifact_id": turns_artifact.id
+                "turns_artifact_id": turns_artifact.id,
+                "diarization_model": diarize_adapter.model_id,
             }
         )
         seg_repo.save(seg)

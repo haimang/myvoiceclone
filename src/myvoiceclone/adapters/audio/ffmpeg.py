@@ -13,6 +13,39 @@ class FFmpegAdapter:
         self.ffmpeg_path = ffmpeg_path
         self.ffprobe_path = ffprobe_path
 
+    def metadata(self) -> dict:
+        return {
+            "tool": "ffmpeg",
+            "model": None,
+            "version": self._version(),
+            "device": "cpu",
+            "cache": None,
+            "license": "LGPL/GPL depending on local build",
+        }
+
+    def preflight(self) -> dict:
+        missing = []
+        if not shutil.which(self.ffmpeg_path):
+            missing.append(self.ffmpeg_path)
+        if not shutil.which(self.ffprobe_path):
+            missing.append(self.ffprobe_path)
+        return {
+            "available": not missing,
+            "missing": missing,
+            "skip_reason": None if not missing else f"Missing FFmpeg binaries: {', '.join(missing)}",
+            **self.metadata(),
+        }
+
+    def _version(self) -> Optional[str]:
+        path = shutil.which(self.ffmpeg_path)
+        if not path:
+            return None
+        try:
+            res = subprocess.run([path, "-version"], capture_output=True, text=True, check=True)
+            return res.stdout.splitlines()[0]
+        except Exception:
+            return None
+
     def _check_binaries(self):
         if os.getenv("MOCK_ADAPTERS", "true").lower() == "true":
             return
@@ -102,6 +135,17 @@ class FFmpegAdapter:
             raise FFmpegAdapterError(f"ffmpeg normalize failed: {e.stderr}")
         except Exception as e:
             raise FFmpegAdapterError(f"Failed to normalize audio: {e}")
+
+    def smoke_metrics(self, filepath: str) -> dict:
+        probe = self.probe(filepath)
+        return {
+            "duration_sec": probe.duration_sec,
+            "sample_rate": probe.sample_rate,
+            "channels": probe.channels,
+            "format": probe.format,
+            "loudness_probe": "available-via-ffmpeg-loudnorm",
+            "silence_probe": "available-via-ffmpeg-silencedetect",
+        }
 
     def extract_segment(self, in_path: str, out_path: str, start_sec: float, end_sec: float) -> None:
         self._check_binaries()

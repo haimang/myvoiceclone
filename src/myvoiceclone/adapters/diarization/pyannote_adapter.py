@@ -7,6 +7,28 @@ class PyannoteAdapter:
         self.hf_token = hf_token or os.getenv("HUGGINGFACE_TOKEN")
         self.model_id = model_id
 
+    def metadata(self) -> dict:
+        return {
+            "tool": "pyannote.audio",
+            "model": self.model_id,
+            "version": None,
+            "device": "cuda-or-cpu",
+            "cache": os.getenv("HF_HOME"),
+            "license": "model-card-gated",
+        }
+
+    def preflight(self) -> dict:
+        if os.getenv("MOCK_ADAPTERS", "true").lower() == "true":
+            return {"available": True, "mode": "mock", "skip_reason": None, **self.metadata()}
+        if not self.hf_token:
+            return {
+                "available": False,
+                "mode": "real",
+                "skip_reason": "HUGGINGFACE_TOKEN is required and pyannote model access terms must be accepted",
+                **self.metadata(),
+            }
+        return {"available": True, "mode": "real", "skip_reason": None, **self.metadata()}
+
     def diarize(self, filepath: str) -> List[DiarizationTurn]:
         if os.getenv("MOCK_ADAPTERS", "true").lower() == "true":
             return [

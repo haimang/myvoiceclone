@@ -7,6 +7,24 @@ class DemucsAdapter:
     def __init__(self, model_id: str = "htdemucs"):
         self.model_id = model_id
 
+    def metadata(self) -> dict:
+        return {
+            "tool": "demucs",
+            "model": self.model_id,
+            "version": None,
+            "device": "cuda-or-cpu",
+            "cache": None,
+            "license": "MIT",
+            "claim": "source_separation_smoke_not_speech_enhancement",
+        }
+
+    def preflight(self) -> dict:
+        if os.getenv("MOCK_ADAPTERS", "true").lower() == "true":
+            return {"available": True, "mode": "mock", "skip_reason": None, **self.metadata()}
+        if not shutil.which("demucs"):
+            return {"available": False, "mode": "real", "skip_reason": "demucs CLI not found", **self.metadata()}
+        return {"available": True, "mode": "real", "skip_reason": None, **self.metadata()}
+
     def separate(self, filepath: str, out_dir: str) -> SeparationResult:
         os.makedirs(out_dir, exist_ok=True)
         filename = os.path.basename(filepath)
@@ -19,6 +37,11 @@ class DemucsAdapter:
             return SeparationResult(cleaned_path=cleaned_path)
             
         # Real subprocess demucs call
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Input file not found: {filepath}")
+        preflight = self.preflight()
+        if not preflight["available"]:
+            raise RuntimeError(preflight["skip_reason"])
         cmd = [
             "demucs",
             "--two-stems", "vocals",
