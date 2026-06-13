@@ -17,9 +17,10 @@ WORKDIR /app
 # Copy application files
 COPY pyproject.toml ./
 COPY src/ ./src/
+COPY db/migrations ./db/migrations
 
 # Install application with required extras
-# V12 fix: must include [cli] for typer, [db] for sqlite-vec, [api] for fastapi, [audio] for real audio IO
-RUN pip install --no-cache-dir ".[cli,db,api,audio]"
+# NGC images already pin torch/torchaudio/CUDA; avoid reinstalling unconstrained torchaudio.
+RUN pip install --no-cache-dir ".[cli,db,api]" soundfile
 
 ENTRYPOINT ["python", "-m", "myvoiceclone.cli"]

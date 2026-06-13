@@ -30,7 +30,8 @@ services:
     volumes:
       - /mnt/usb/workspace/myvoiceresearch/db:/app/db
       - /mnt/usb/workspace/myvoiceresearch/data:/app/data
-      - ../../configs:/app/configs
+      - /mnt/usb/workspace/myvoiceresearch/test-runs:/mnt/usb/workspace/myvoiceresearch/test-runs
+      - ../../configs:/app/configs:ro
     environment:
       - DB_PATH=${DB_PATH:-/app/db/myvoiceclone.sqlite}
       - ARTIFACT_ROOT=${ARTIFACT_ROOT:-/app/data/artifacts}
@@ -46,7 +47,8 @@ services:
     volumes:
       - /mnt/usb/workspace/myvoiceresearch/db:/app/db
       - /mnt/usb/workspace/myvoiceresearch/data:/app/data
-      - ../../configs:/app/configs
+      - /mnt/usb/workspace/myvoiceresearch/test-runs:/mnt/usb/workspace/myvoiceresearch/test-runs
+      - ../../configs:/app/configs:ro
       - /mnt/usb/workspace/myvoiceresearch/models:/app/models
     environment:
       - DB_PATH=${DB_PATH:-/app/db/myvoiceclone.sqlite}
