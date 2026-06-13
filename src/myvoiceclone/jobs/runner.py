@@ -1,11 +1,12 @@
 import sqlite3
 import logging
+import time
 from typing import Dict, Any, Optional
 from myvoiceclone.domain.entities import Job
 from myvoiceclone.domain.states import JobStatus
 from myvoiceclone.storage.repositories import JobRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
-from myvoiceclone.jobs.events import write_job_event
+from myvoiceclone.jobs.events import write_job_event, write_step_event
 
 # Pipeline step imports
 from myvoiceclone.pipelines.ingest import run_ingest
@@ -102,7 +103,15 @@ class JobRunner:
                 
             job.status = JobStatus.COMPLETED.value
             self.repo.save(job)
-            write_job_event(self.conn, job_id, "complete", JobStatus.RUNNING.value, JobStatus.COMPLETED.value, "Job completed successfully")
+            write_job_event(
+                self.conn,
+                job_id,
+                "complete",
+                JobStatus.RUNNING.value,
+                JobStatus.COMPLETED.value,
+                "Job completed successfully",
+                metadata_json={"job_name": job.name},
+            )
             self.conn.commit()
             
         except KeyboardInterrupt as ke:
@@ -118,7 +127,15 @@ class JobRunner:
             job.status = JobStatus.FAILED.value
             job.error_msg = str(e)
             self.repo.save(job)
-            write_job_event(self.conn, job_id, "fail", JobStatus.RUNNING.value, JobStatus.FAILED.value, f"Job failed: {e}")
+            write_job_event(
+                self.conn,
+                job_id,
+                "fail",
+                JobStatus.RUNNING.value,
+                JobStatus.FAILED.value,
+                f"Job failed: {e}",
+                metadata_json={"job_name": job.name, "error": str(e)},
+            )
             self.conn.commit()
             raise e
 
@@ -135,32 +152,118 @@ class JobRunner:
         if not filepath:
             raise ValueError("Payload missing 'filepath' key")
             
-        # 1. Ingest
-        logger.info("Step 1: Ingesting audio file...")
-        rec = run_ingest(self.conn, self.artifact_store, self.ffmpeg_adapter, filepath, job_id=job.id)
-        
-        # 2. Diarize
-        logger.info("Step 2: Performing speaker diarization...")
-        run_diarize(self.conn, self.artifact_store, self.pyannote_adapter, rec.id, job_id=job.id)
-        
-        # 3. Slice
-        logger.info("Step 3: Slicing segments...")
+        rec_holder: Dict[str, Any] = {}
+
+        def ingest_step():
+            rec_holder["recording"] = run_ingest(
+                self.conn, self.artifact_store, self.ffmpeg_adapter, filepath, job_id=job.id
+            )
+            return {"recording_id": rec_holder["recording"].id}
+
+        self._run_observed_step(job.id, "ingest", ingest_step)
+        rec = rec_holder["recording"]
+
+        self._run_observed_step(
+            job.id,
+            "diarize",
+            lambda: run_diarize(self.conn, self.artifact_store, self.pyannote_adapter, rec.id, job_id=job.id),
+        )
+
         min_dur = payload.get("min_duration", 2.0)
         max_dur = payload.get("max_duration", 10.0)
-        run_slice(self.conn, self.artifact_store, self.ffmpeg_adapter, rec.id, min_duration=min_dur, max_duration=max_dur, job_id=job.id)
-        
-        # 4. Clean
-        logger.info("Step 4: Separating vocals / cleaning...")
-        run_clean(self.conn, self.artifact_store, self.demucs_adapter, rec.id, job_id=job.id)
-        
-        # 5. Transcribe
-        logger.info("Step 5: Performing ASR transcription...")
-        run_transcribe(self.conn, self.artifact_store, self.whisper_adapter, rec.id, job_id=job.id)
-        
-        # 6. Score
-        logger.info("Step 6: Scoring segment quality...")
+        self._run_observed_step(
+            job.id,
+            "slice",
+            lambda: run_slice(
+                self.conn,
+                self.artifact_store,
+                self.ffmpeg_adapter,
+                rec.id,
+                min_duration=min_dur,
+                max_duration=max_dur,
+                job_id=job.id,
+            ),
+        )
+
+        self._run_observed_step(
+            job.id,
+            "clean",
+            lambda: run_clean(self.conn, self.artifact_store, self.demucs_adapter, rec.id, job_id=job.id),
+        )
+
+        self._run_observed_step(
+            job.id,
+            "transcribe",
+            lambda: run_transcribe(self.conn, self.artifact_store, self.whisper_adapter, rec.id, job_id=job.id),
+        )
+
         min_quality = payload.get("min_quality_score", 0.6)
-        run_score(self.conn, rec.id, min_quality_score=min_quality)
+        self._run_observed_step(
+            job.id,
+            "score",
+            lambda: run_score(self.conn, rec.id, min_quality_score=min_quality),
+        )
+        self._write_preprocess_failure_summary(job.id, rec.id)
+
+    def _run_observed_step(self, job_id: str, step: str, fn):
+        logger.info("Running preprocess step: %s", step)
+        write_step_event(self.conn, job_id, step, "started")
+        self.conn.commit()
+        started = time.monotonic()
+        try:
+            result = fn()
+        except Exception as exc:
+            duration_ms = int((time.monotonic() - started) * 1000)
+            write_step_event(
+                self.conn,
+                job_id,
+                step,
+                "failed",
+                duration_ms=duration_ms,
+                error=str(exc),
+            )
+            self.conn.commit()
+            raise
+        duration_ms = int((time.monotonic() - started) * 1000)
+        metadata = result if isinstance(result, dict) else {}
+        write_step_event(
+            self.conn,
+            job_id,
+            step,
+            "succeeded",
+            duration_ms=duration_ms,
+            metadata_json=metadata,
+        )
+        self.conn.commit()
+        return result
+
+    def _write_preprocess_failure_summary(self, job_id: str, recording_id: str) -> None:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT status, COUNT(*) AS count
+            FROM segments
+            WHERE recording_id = ?
+              AND status IN ('clean_failed', 'transcribe_failed', 'drop', 'ignored_duration_bounds')
+            GROUP BY status;
+            """,
+            (recording_id,),
+        )
+        failures = {row["status"]: row["count"] for row in cursor.fetchall()}
+        write_job_event(
+            self.conn,
+            job_id,
+            "failure_summary",
+            None,
+            None,
+            "Preprocess segment failure summary",
+            metadata_json={
+                "recording_id": recording_id,
+                "failed_segment_count": sum(failures.values()),
+                "failure_counts": failures,
+            },
+        )
+        self.conn.commit()
 
     def _execute_train_sovits(self, job: Job):
         payload = job.payload_json
