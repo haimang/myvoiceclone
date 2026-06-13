@@ -38,6 +38,28 @@ def test_recordings_endpoints(api_client, db_conn):
     assert res3.json()["name"] == "ingest"
     assert res3.json()["status"] == "pending"
 
+
+@pytest.mark.api
+def test_create_preprocess_job(api_client, db_conn):
+    payload = {
+        "filepath": "input.wav",
+        "min_duration": 1.0,
+        "max_duration": 6.0,
+        "min_quality_score": 0.75,
+    }
+
+    res = api_client.post("/api/recordings/preprocess", json=payload)
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["name"] == "preprocess_all"
+    assert body["status"] == "pending"
+    assert body["payload_json"] == payload
+
+    row = db_conn.execute("SELECT name, payload_json FROM jobs WHERE id = ?;", (body["id"],)).fetchone()
+    assert row["name"] == "preprocess_all"
+    assert '"filepath": "input.wav"' in row["payload_json"]
+
 @pytest.mark.api
 def test_segments_endpoints(api_client, db_conn):
     # Pre-populate data
@@ -128,3 +150,32 @@ def test_jobs_endpoints(api_client, db_conn):
     res2 = api_client.get("/api/jobs/job_route_1")
     assert res2.status_code == 200
     assert res2.json()["name"] == "ingest"
+
+
+@pytest.mark.api
+def test_subjective_report_endpoint(api_client, db_conn):
+    db_conn.execute(
+        """
+        INSERT INTO model_runs (id, name, status, config_json)
+        VALUES ('run_subjective_api', 'Subjective API Run', 'completed', '{}');
+        """
+    )
+    db_conn.commit()
+
+    res = api_client.post(
+        "/api/reports/subjective",
+        json={
+            "report_id": "rpt_subjective_api",
+            "run_id": "run_subjective_api",
+            "abx_score": 0.75,
+            "mos_score": 4.0,
+            "reviewer": "alice",
+            "comment": "usable",
+        },
+    )
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["id"] == "rpt_subjective_api"
+    assert body["summary_json"]["metric_source"] == "manual_mos"
+    assert body["summary_json"]["reviewer"] == "alice"

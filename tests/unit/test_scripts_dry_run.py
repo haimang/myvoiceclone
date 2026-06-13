@@ -19,11 +19,15 @@ def run_script(script_name, *args):
 def test_bootstrap_dry_run():
     output = run_script("bootstrap_env.sh", "--dry-run")
     assert "[Dry-run] Would bootstrap" in output
+    assert "myvoiceclone[first-test]" in output
+    assert "ffmpeg ffprobe" in output
 
 @pytest.mark.unit
 def test_download_models_dry_run():
     output = run_script("download_models.sh", "--dry-run")
-    assert "[Dry-run] Would download RVC" in output
+    assert "[Dry-run] Would prepare model manifest" in output
+    assert "XTTS-v2" in output
+    assert "Coqui Public Model License" in output
 
 @pytest.mark.unit
 def test_preprocess_dry_run():

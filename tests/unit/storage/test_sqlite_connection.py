@@ -26,5 +26,7 @@ def test_sqlite_file_connection(tmp_path):
     # Check journal mode is WAL
     journal = conn.execute("PRAGMA journal_mode;").fetchone()[0]
     assert journal.lower() == "wal", "Journal mode should be WAL"
+    assert conn.execute("PRAGMA foreign_keys;").fetchone()[0] == 1
+    assert conn.execute("PRAGMA busy_timeout;").fetchone()[0] == 5000
     
     conn.close()

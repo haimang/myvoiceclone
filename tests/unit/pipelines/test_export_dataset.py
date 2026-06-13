@@ -80,9 +80,29 @@ def test_manifest_checksum_immutable(db_conn, artifact_store):
     assert ds.status == "frozen"
     assert ds.manifest_sha256 is not None
     assert ds.frozen_at is not None
+
+    manifest_artifact = artifact_store.get_artifact(ds.manifest_artifact_id)
+    manifest_path = artifact_store.get_absolute_path(manifest_artifact)
+    with open(manifest_path, encoding="utf-8") as f:
+        rows = [line for line in f.read().splitlines() if line]
+    assert rows
+    assert '"segment_id":' in rows[0]
+    assert '"cleaned_artifact_id":' in rows[0]
+    assert '"sha256":' in rows[0]
+    assert '"lineage":' in rows[0]
     
     # Try running export again on the frozen dataset, should raise RuntimeError
     with pytest.raises(RuntimeError) as exc_info:
         run_export_dataset(db_conn, artifact_store, dataset_id="ds_freeze", name="Freeze DS")
         
     assert "frozen and cannot be modified" in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_export_dataset_refuses_empty_manifest(db_conn, artifact_store):
+    with pytest.raises(RuntimeError) as exc_info:
+        run_export_dataset(db_conn, artifact_store, dataset_id="ds_empty", name="Empty DS")
+
+    assert "empty manifests are not valid first-test evidence" in str(exc_info.value)
+    row = db_conn.execute("SELECT id FROM artifacts WHERE artifact_type = 'dataset';").fetchone()
+    assert row is None

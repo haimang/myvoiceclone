@@ -129,3 +129,31 @@ def test_release_gate_not_found(api_client):
     
     res2 = api_client.get("/api/reports/release-gates/gate_missing")
     assert res2.status_code == 404
+
+
+@pytest.mark.api
+def test_release_gate_blocks_mock_metrics(monkeypatch, api_client, db_conn):
+    monkeypatch.setattr(
+        "myvoiceclone.domain.policies.load_local_config",
+        lambda: {"security": {"enabled": False}}
+    )
+    db_conn.execute("INSERT INTO model_runs (id, name, status, config_json) VALUES ('gate_mock_run', 'Mock Run', 'completed', '{}');")
+    db_conn.execute(
+        """
+        INSERT INTO eval_metrics (run_id, metric_name, metric_value, metric_json)
+        VALUES ('gate_mock_run', 'speaker_similarity', 0.99, '{"metric_source":"mock","quality_gate_eligible":false}');
+        """
+    )
+    db_conn.commit()
+
+    res = api_client.post(
+        "/api/reports/release-gates",
+        json={"gate_id": "gate_mock_metric", "model_run_id": "gate_mock_run"},
+    )
+
+    assert res.status_code == 200
+    data = res.json()
+    assert data["passed"] is False
+    assert data["details_json"]["smoke_pass"] is True
+    assert data["details_json"]["quality_pass"] is False
+    assert "mock metrics" in data["details_json"]["blocked_reasons"][0]

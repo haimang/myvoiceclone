@@ -17,3 +17,9 @@ def test_pytest_markers_exist():
     required_markers = ["unit", "api", "cli", "integration", "live", "gpu", "slow"]
     for marker in required_markers:
         assert marker in markers_text, f"Marker '{marker}' is missing from pytest.ini"
+
+    addopts = config["pytest"].get("addopts", "")
+    assert 'unit or api or cli or integration' in addopts
+    assert "live" not in addopts.split("-m", 1)[1].split("--", 1)[0]
+    assert "gpu" not in addopts.split("-m", 1)[1].split("--", 1)[0]
+    assert "slow" not in addopts.split("-m", 1)[1].split("--", 1)[0]

@@ -34,7 +34,20 @@ def test_job_runner_success_preprocess(db_conn, artifact_store, synthetic_wav):
     events = job_repo.get_events(job.id)
     assert len(events) >= 3  # enqueue, start, complete
     assert events[1].status_to == "running"
-    assert events[2].status_to == "completed"
+    assert events[-1].status_to == "completed"
+    step_events = [e for e in events if e.event_type.startswith("step_")]
+    assert {e.metadata_json["step"] for e in step_events if e.event_type == "step_succeeded"} == {
+        "ingest",
+        "diarize",
+        "slice",
+        "clean",
+        "transcribe",
+        "score",
+    }
+    assert all("duration_ms" in e.metadata_json for e in step_events if e.event_type == "step_succeeded")
+    summaries = [e for e in events if e.event_type == "failure_summary"]
+    assert summaries
+    assert summaries[0].metadata_json["failed_segment_count"] == 0
     
     # Check that segments were created and scored
     seg_repo = SegmentRepository(db_conn)
@@ -70,3 +83,7 @@ def test_job_runner_failure(db_conn, artifact_store):
     
     events = job_repo.get_events(job.id)
     assert events[-1].status_to == "failed"
+    failed_steps = [e for e in events if e.event_type == "step_failed"]
+    assert failed_steps
+    assert failed_steps[0].metadata_json["step"] == "ingest"
+    assert "Source file not found" in failed_steps[0].metadata_json["error"]
