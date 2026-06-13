@@ -324,12 +324,12 @@ P3 Corpus
 
 | 收口目标 | 工作项 | Test-ID | PASS 证据（四元组）| 状态 |
 |----------|--------|---------|---------------------|------|
-| review audit | P3-01 | P3-T01 | commit {sha} + pytest tests/unit/pipelines/test_curate.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| vec search | P3-02 | P3-T02 | commit {sha} + pytest tests/unit/pipelines/test_embeddings.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| dedupe | P3-03 | P3-T03 | commit {sha} + pytest tests/unit/pipelines/test_curate_dedupe.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| no leak split | P3-04 | P3-T04 | commit {sha} + pytest tests/unit/pipelines/test_export_dataset.py::test_split_leak_detector PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| immutable manifest | P3-05 | P3-T05 | commit {sha} + pytest tests/unit/pipelines/test_export_dataset.py::test_manifest_checksum_immutable PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
-| audit report | P3-06 | P3-T06 | commit {sha} + pytest tests/unit/eval/test_corpus_report.py PASS + {YYYY-MM-DD HH:MM UTC} | 未观察 |
+| review audit | P3-01 | P3-T01 | commit b2ab537 + pytest tests/unit/pipelines/test_curate.py PASS + 2026-06-13 11:15 UTC | ✅ verified |
+| vec search | P3-02 | P3-T02 | commit b2ab537 + pytest tests/unit/pipelines/test_embeddings.py PASS + 2026-06-13 11:15 UTC | ✅ verified |
+| dedupe | P3-03 | P3-T03 | commit b2ab537 + pytest tests/unit/pipelines/test_curate_dedupe.py PASS + 2026-06-13 11:15 UTC | ✅ verified |
+| no leak split | P3-04 | P3-T04 | commit b2ab537 + pytest tests/unit/pipelines/test_export_dataset.py::test_split_leak_detector PASS + 2026-06-13 11:15 UTC | ✅ verified |
+| immutable manifest | P3-05 | P3-T05 | commit b2ab537 + pytest tests/unit/pipelines/test_export_dataset.py::test_manifest_checksum_immutable PASS + 2026-06-13 11:15 UTC | ✅ verified |
+| audit report | P3-06 | P3-T06 | commit b2ab537 + pytest tests/unit/eval/test_corpus_report.py PASS + 2026-06-13 11:15 UTC | ✅ verified |
 
 ### 10.3 Definition of Done
 
@@ -344,3 +344,12 @@ P3 Corpus
 ### 10.4 NOT-成功识别
 
 训练能绕过 manifest、split 泄漏未被测出、或 frozen dataset 可修改，均不得标 `executed`。
+
+## 11. Work Log
+
+- **2026-06-13 11:11**: Started P3 implementation. Created curation transitions logic in `pipelines/curate.py` with append-only database audit logs.
+- **2026-06-13 11:12**: Implemented resnet/clap/bge deterministic mock embeddings in `adapters/embeddings/speaker_embedder.py`, `audio_embedder.py`, and `text_embedder.py`.
+- **2026-06-13 11:13**: Implemented similarity-based deduplication logic inside `pipelines/curate.py` using `sqlite-vec` searches.
+- **2026-06-13 11:14**: Implemented leak-free dataset split partitioning, JSONL manifest generation, and dataset freeze status logic in `pipelines/export_dataset.py`. Created report generator in `eval/report.py`.
+- **2026-06-13 11:15**: Wrote all P3 tests (curate, embeddings, dedupe, export, leak, report) and verified they pass under virtual environment. Committed all P3 files to repository.
+
