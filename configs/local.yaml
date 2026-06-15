@@ -1,3 +1,4 @@
-db_path: "db/myvoiceclone.sqlite"
-artifact_root: "data/artifacts"
-models_dir: "models"
+db_path: ".data/db/myvoiceclone.sqlite"
+artifact_root: ".data/artifacts"
+models_dir: ".data/models"
+evidence_root: ".data/test-runs"

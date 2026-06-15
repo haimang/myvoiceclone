@@ -30,6 +30,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Runtime data directory (self-contained inside repo, excluded from git)
+.data/
+
 # Audio & Dataset Files (prevent committing large audio datasets)
 *.wav
 *.mp3
@@ -42,7 +45,6 @@ datasets/
 raw_data/
 preprocess/out/
 preprocess/in/
-data/
 db/*.sqlite
 db/*.db
 
@@ -72,3 +74,7 @@ Thumbs.db
 
 # Log files
 *.log
+
+# config
+.env
+CHECKLIST.md

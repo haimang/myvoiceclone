@@ -2,15 +2,26 @@
 # to NVIDIA NGC PyTorch image with aarch64 support and CUDA 12.x.
 # For aarch64 + GB10 (Blackwell sm_120), use PyTorch 2.7+ which supports sm_120.
 # NOTE: Pull nvcr.io/nvidia/pytorch:25.03-py3 or later for sm_120/Blackwell support.
-# If NGC image unavailable offline, set DOCKER_BASE_IMAGE env var to override.
-FROM nvcr.io/nvidia/pytorch:25.03-py3
+# If NGC image unavailable offline, build with --build-arg TRAIN_BASE_IMAGE=...
+ARG TRAIN_BASE_IMAGE=nvcr.io/nvidia/pytorch:25.03-py3
+FROM ${TRAIN_BASE_IMAGE}
+
+ARG INSTALL_TORCH=true
+ARG TORCH_PACKAGES="torch==2.12.0"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     git \
     libsndfile1 \
+    python3 \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv --system-site-packages /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
 
@@ -18,9 +29,39 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY src/ ./src/
 COPY db/migrations ./db/migrations
+COPY db/migrations ./db-migrations
 
-# Install application with required extras
-# NGC images already pin torch/torchaudio/CUDA; avoid reinstalling unconstrained torchaudio.
-RUN pip install --no-cache-dir ".[cli,db,api]" soundfile
+# Install application with required extras with extended timeout and retry
+# NGC images already pin torch/CUDA; avoid installing torchaudio unless a matching wheel exists.
+RUN python -m pip install --no-cache-dir --timeout 300 --retries 5 ".[cli,db,api]" soundfile
+
+RUN if [ "$INSTALL_TORCH" = "true" ]; then \
+        python -m pip install --no-cache-dir --timeout 300 --retries 5 $TORCH_PACKAGES; \
+    fi
+
+ARG INSTALL_COQUI_TTS=true
+
+RUN if [ "$INSTALL_COQUI_TTS" = "true" ]; then \
+        apt-get update && apt-get install -y --no-install-recommends python3-dev && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+RUN if [ "$INSTALL_COQUI_TTS" = "true" ]; then \
+        python -m pip install --no-cache-dir --timeout 300 --retries 5 "cython>=3.0.0"; \
+    fi
+
+ARG COQUI_TTS_PACKAGE="coqui-tts==0.27.5"
+ARG COQUI_PIP_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"
+
+RUN if [ "$INSTALL_COQUI_TTS" = "true" ]; then \
+        python -m pip install --no-cache-dir --no-build-isolation --index-url "$COQUI_PIP_INDEX_URL" --timeout 300 --retries 5 $COQUI_TTS_PACKAGE; \
+    fi
+
+RUN if [ "$INSTALL_COQUI_TTS" = "true" ]; then \
+        python -m pip install --no-cache-dir --index-url "$COQUI_PIP_INDEX_URL" --timeout 300 --retries 5 --no-deps torchaudio==2.11.0 && \
+        python -m pip install --no-cache-dir --index-url "$COQUI_PIP_INDEX_URL" --timeout 300 --retries 5 \
+            "transformers==4.57.3" \
+            "huggingface-hub<1.0,>=0.34.0" \
+            "torchcodec==0.14.0"; \
+    fi
 
 ENTRYPOINT ["python", "-m", "myvoiceclone.cli"]

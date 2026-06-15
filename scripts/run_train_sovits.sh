@@ -23,4 +23,4 @@ if [ $DRY_RUN -eq 1 ]; then
 fi
 
 echo "Running training on dataset $DATASET_ID..."
-./venv/bin/python -m myvoiceclone.cli train sovits --dataset "$DATASET_ID"
+./venv/bin/python -m myvoiceclone.cli train sovits "$DATASET_ID"

@@ -18,9 +18,9 @@
 #   2. Run `mvc ingest /path/to/real.wav` to add real audio
 #   3. Create and freeze a dataset before running train
 #
-# Data volumes are mounted from /mnt/usb/workspace/myvoiceresearch so large
-# audio/checkpoint artifacts stay outside the repository checkout.
-# V13 note: /mnt/usb/workspace/myvoiceresearch/data/raw/sample.wav is a placeholder path.
+# Data volumes are mounted from the repository checkout under .data/
+# so the workspace is self-contained. Large artifacts are excluded from git via .gitignore.
+# V13 note: /app/data/raw/sample.wav is a placeholder path.
 
 services:
   preprocess:
@@ -28,34 +28,49 @@ services:
       context: ../..
       dockerfile: infra/docker/Dockerfile.preprocess
     volumes:
-      - /mnt/usb/workspace/myvoiceresearch/db:/app/db
-      - /mnt/usb/workspace/myvoiceresearch/data:/app/data
-      - /mnt/usb/workspace/myvoiceresearch/test-runs:/mnt/usb/workspace/myvoiceresearch/test-runs
+      - ../../.data/db:/app/db
+      - ../../.data/artifacts:/app/data/artifacts
+      - ../../.data/raw:/app/data/raw
+      - ../../.data/test-runs:/app/test-runs
       - ../../configs:/app/configs:ro
     environment:
-      - DB_PATH=${DB_PATH:-/app/db/myvoiceclone.sqlite}
-      - ARTIFACT_ROOT=${ARTIFACT_ROOT:-/app/data/artifacts}
-      - MOCK_ADAPTERS=${MOCK_ADAPTERS:-true}
+      - DB_PATH=/app/db/myvoiceclone.sqlite
+      - MIGRATIONS_DIR=/app/db-migrations
+      - ARTIFACT_ROOT=/app/data/artifacts
+      - EVIDENCE_ROOT=/app/test-runs
+      - MOCK_ADAPTERS=${MOCK_ADAPTERS:-false}
     # NOTE: /app/data/raw/sample.wav must be provided via the volume mount above.
-    # For quick testing, copy any WAV file to data/raw/sample.wav on the host.
+    # For quick testing, copy any WAV file to .data/raw/sample.wav on the host.
     command: ["ingest", "/app/data/raw/sample.wav"]
 
   train:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.train
+      args:
+        TRAIN_BASE_IMAGE: ${TRAIN_BASE_IMAGE:-nvidia/cuda:13.0.0-devel-ubuntu24.04}
+        INSTALL_TORCH: ${INSTALL_TORCH:-true}
+        TORCH_PACKAGES: ${TORCH_PACKAGES:-torch==2.12.0}
+        INSTALL_COQUI_TTS: ${INSTALL_COQUI_TTS:-true}
+        COQUI_TTS_PACKAGE: ${COQUI_TTS_PACKAGE:-coqui-tts==0.27.5}
+        COQUI_PIP_INDEX_URL: ${COQUI_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
     runtime: nvidia
     volumes:
-      - /mnt/usb/workspace/myvoiceresearch/db:/app/db
-      - /mnt/usb/workspace/myvoiceresearch/data:/app/data
-      - /mnt/usb/workspace/myvoiceresearch/test-runs:/mnt/usb/workspace/myvoiceresearch/test-runs
+      - ../../.data/db:/app/db
+      - ../../.data/artifacts:/app/data/artifacts
+      - ../../.data/raw:/app/data/raw
+      - ../../.data/test-runs:/app/test-runs
       - ../../configs:/app/configs:ro
-      - /mnt/usb/workspace/myvoiceresearch/models:/app/models
+      - ../../.data/models:/app/models
     environment:
-      - DB_PATH=${DB_PATH:-/app/db/myvoiceclone.sqlite}
-      - ARTIFACT_ROOT=${ARTIFACT_ROOT:-/app/data/artifacts}
-      - MODELS_DIR=${MODELS_DIR:-/app/models}
-      - MOCK_ADAPTERS=${MOCK_ADAPTERS:-true}
+      - DB_PATH=/app/db/myvoiceclone.sqlite
+      - MIGRATIONS_DIR=/app/db-migrations
+      - ARTIFACT_ROOT=/app/data/artifacts
+      - MODELS_DIR=/app/models
+      - TTS_HOME=/app/models/coqui
+      - HF_HOME=/app/models/huggingface
+      - EVIDENCE_ROOT=/app/test-runs
+      - MOCK_ADAPTERS=${MOCK_ADAPTERS:-false}
     # V11: requires nvidia-container-toolkit installed and configured (see header above)
     deploy:
       resources:
@@ -66,4 +81,4 @@ services:
               capabilities: [gpu]
     # NOTE: TRAIN_DATASET must name an existing frozen dataset.
     # Run: mvc dataset create "$TRAIN_DATASET" && mvc dataset freeze "$TRAIN_DATASET"
-    command: ["train", "sovits", "--dataset", "${TRAIN_DATASET:-my_dataset}"]
+    command: ["train", "sovits", "${TRAIN_DATASET:-my_dataset}"]

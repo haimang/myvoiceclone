@@ -10,14 +10,16 @@ done
 
 if [ $DRY_RUN -eq 1 ]; then
   echo "[Dry-run] Would prepare model manifest for XTTS-v2, RVC, and So-VITS weights."
-  echo "[Dry-run] XTTS-v2 source=https://huggingface.co/coqui/XTTS-v2 license=Coqui Public Model License cache=${MODELS_DIR:-models}"
+  echo "[Dry-run] XTTS-v2 source=https://huggingface.co/coqui/XTTS-v2 license=Coqui Public Model License cache=${MODELS_DIR:-.data/models}"
   exit 0
 fi
 
 echo "Downloading base models..."
-mkdir -p models/pretrained
+MODELS_ROOT="${MODELS_DIR:-.data/models}"
+PRETRAINED_DIR="$MODELS_ROOT/pretrained"
+mkdir -p "$PRETRAINED_DIR"
 # In a live environment, download via wget or curl
-cat > models/pretrained/first-test-model-manifest.json <<'JSON'
+cat > "$PRETRAINED_DIR/first-test-model-manifest.json" <<'JSON'
 {
   "xtts_v2": {
     "model_id": "tts_models/multilingual/multi-dataset/xtts_v2",
@@ -27,4 +29,4 @@ cat > models/pretrained/first-test-model-manifest.json <<'JSON'
   }
 }
 JSON
-echo "Model manifest written to models/pretrained/first-test-model-manifest.json."
+echo "Model manifest written to $PRETRAINED_DIR/first-test-model-manifest.json."

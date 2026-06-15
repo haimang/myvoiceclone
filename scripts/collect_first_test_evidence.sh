@@ -2,7 +2,7 @@
 set -euo pipefail
 
 RUN_ID="${RUN_ID:-first-test-$(date -u +%Y%m%dT%H%M%SZ)}"
-EVIDENCE_ROOT="${EVIDENCE_ROOT:-/mnt/usb/workspace/myvoiceresearch/test-runs}"
+EVIDENCE_ROOT="${EVIDENCE_ROOT:-.data/test-runs}"
 ADAPTER_MODE="${ADAPTER_MODE:-real}"
 STATUS="${STATUS:-collected}"
 PYTHON_BIN="${PYTHON_BIN:-./venv/bin/python}"

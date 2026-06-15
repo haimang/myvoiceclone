@@ -1,6 +1,6 @@
-pretrained_dir: "models/pretrained"
-checkpoints_dir: "models/checkpoints"
-registry_dir: "models/registry"
+pretrained_dir: ".data/models/pretrained"
+checkpoints_dir: ".data/models/checkpoints"
+registry_dir: ".data/models/registry"
 
 pyannote:
   model_id: "pyannote/speaker-diarization-3.1"
