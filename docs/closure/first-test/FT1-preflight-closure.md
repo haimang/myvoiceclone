@@ -21,13 +21,13 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| FT1-P1-01 命令与文档入口统一 | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/test_first_test_command_docs.py` + `2026-06-13 08:26 UTC` |
-| FT1-P1-02 live bootstrap extras | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/test_scripts_dry_run.py::test_bootstrap_dry_run` + `2026-06-13 08:26 UTC` |
-| FT1-P1-03 env 示例对齐 | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/test_project_config.py::test_runtime_env_resolvers` + `2026-06-13 08:26 UTC` |
-| FT1-P2-01 CLI preprocess payload 修复 | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/cli/test_cli.py::test_cli_preprocess_all_payload` + `2026-06-13 08:26 UTC` |
-| FT1-P2-02 API preprocess job creation | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_routes.py::test_create_preprocess_job` + `2026-06-13 08:26 UTC` |
-| FT1-P3-01 empty manifest guard | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/pipelines/test_export_dataset.py::test_export_dataset_refuses_empty_manifest` + `2026-06-13 08:26 UTC` |
-| FT1-P3-02 API artifact root resolver | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_first_test_preflight.py::test_run_job_uses_env_artifact_root` + `2026-06-13 08:26 UTC` |
+| FT1-P1-01 命令与文档入口统一 | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/test_first_test_command_docs.py` + `2026-06-13 08:26 UTC` |
+| FT1-P1-02 live bootstrap extras | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/test_scripts_dry_run.py::test_bootstrap_dry_run` + `2026-06-13 08:26 UTC` |
+| FT1-P1-03 env 示例对齐 | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/test_project_config.py::test_runtime_env_resolvers` + `2026-06-13 08:26 UTC` |
+| FT1-P2-01 CLI preprocess payload 修复 | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/cli/test_cli.py::test_cli_preprocess_all_payload` + `2026-06-13 08:26 UTC` |
+| FT1-P2-02 API preprocess job creation | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_routes.py::test_create_preprocess_job` + `2026-06-13 08:26 UTC` |
+| FT1-P3-01 empty manifest guard | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/pipelines/test_export_dataset.py::test_export_dataset_refuses_empty_manifest` + `2026-06-13 08:26 UTC` |
+| FT1-P3-02 API artifact root resolver | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_first_test_preflight.py::test_run_job_uses_env_artifact_root` + `2026-06-13 08:26 UTC` |
 
 ## 2. Evidence / Validation 矩阵
 
@@ -59,7 +59,7 @@
 | 收口纪律 | 兑现声明 |
 |----------|----------|
 | 每个 ✅ 归类 5 态（verified / observed-OK-at-closure / partial / 未观察 / deferred）| ✅ `observed-OK-at-closure`，短途测试已通过；未宣称 live |
-| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 952fbc5`，本轮未请求 commit |
+| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD {HEAD}`，本轮未请求 commit |
 | scope diff 守卫（`git diff --stat` 与 in-scope 一致，无越界修改）| ✅ 改动限 FT1 AP 指定入口/config/docs/tests |
 | deferred 已三分类（A/B/C）且每项有承接位置 | ✅ |
 | owner-test 项未经 owner 复测的标 ⏸ PENDING（无「我修了」式宣称）| N/A |

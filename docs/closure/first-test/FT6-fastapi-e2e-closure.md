@@ -21,13 +21,13 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| FT6-P1-01 first-test run contract | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_first_test_runs.py::test_create_run_contract_snapshot` + `2026-06-13 08:47 UTC` |
-| FT6-P1-02 response contract fixture | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/contracts/first_test_run_create.json` + `2026-06-13 08:47 UTC` |
-| FT6-P2-01 upload audio artifact | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_first_test_runs.py::test_upload_audio_immediately_writes_artifact` + `2026-06-13 08:47 UTC` |
-| FT6-P2-02 start preprocess/infer/eval jobs | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_first_test_runs.py::test_start_jobs_reference_artifact_ids` + `2026-06-13 08:47 UTC` |
-| FT6-P3-01 status API | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_first_test_runs.py::test_run_status_aggregates_events_artifacts_and_failures` + `2026-06-13 08:47 UTC` |
-| FT6-P3-02 report/release/trace reuse | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_audit_trace.py` + `2026-06-13 08:47 UTC` |
-| FT6-P3-03 live HTTP spike | ⏸ pending | `uncommitted working tree on HEAD 952fbc5` + `tests/integration/test_first_test_http_smoke.py -m live -q -rs` -> `1 skipped: RUN_LIVE_HTTP=1 is required...` + `2026-06-13 08:47 UTC` |
+| FT6-P1-01 first-test run contract | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_first_test_runs.py::test_create_run_contract_snapshot` + `2026-06-13 08:47 UTC` |
+| FT6-P1-02 response contract fixture | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/contracts/first_test_run_create.json` + `2026-06-13 08:47 UTC` |
+| FT6-P2-01 upload audio artifact | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_first_test_runs.py::test_upload_audio_immediately_writes_artifact` + `2026-06-13 08:47 UTC` |
+| FT6-P2-02 start preprocess/infer/eval jobs | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_first_test_runs.py::test_start_jobs_reference_artifact_ids` + `2026-06-13 08:47 UTC` |
+| FT6-P3-01 status API | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_first_test_runs.py::test_run_status_aggregates_events_artifacts_and_failures` + `2026-06-13 08:47 UTC` |
+| FT6-P3-02 report/release/trace reuse | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_audit_trace.py` + `2026-06-13 08:47 UTC` |
+| FT6-P3-03 live HTTP spike | ⏸ pending | `uncommitted working tree on HEAD {HEAD}` + `tests/integration/test_first_test_http_smoke.py -m live -q -rs` -> `1 skipped: RUN_LIVE_HTTP=1 is required...` + `2026-06-13 08:47 UTC` |
 
 ## 2. Evidence / Validation 矩阵
 
@@ -63,7 +63,7 @@
 | 收口纪律 | 兑现声明 |
 |----------|----------|
 | 每个 ✅ 归类 5 态（verified / observed-OK-at-closure / partial / 未观察 / deferred）| ✅ `observed-OK-at-closure`，TestClient/default suite 已通过；live socket 明确 pending |
-| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 952fbc5`，本轮未请求 commit |
+| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD {HEAD}`，本轮未请求 commit |
 | scope diff 守卫（`git diff --stat` 与 in-scope 一致，无越界修改）| ✅ FT6 新增/修改集中在 API schemas/routes/tests/pyproject 与阶段文档 |
 | deferred 已三分类（A/B/C）且每项有承接位置 | ✅ |
 | owner-test 项未经 owner 复测的标 ⏸ PENDING（无「我修了」式宣称）| N/A |

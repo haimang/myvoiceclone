@@ -21,12 +21,12 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| FT5-P1-01 metric taxonomy | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/eval/test_objective.py` + `2026-06-13 08:41 UTC` |
-| FT5-P1-02 report schema fields | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_routes.py::test_subjective_report_endpoint` + `2026-06-13 08:41 UTC` |
-| FT5-P2-01 smoke evaluator | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/eval/test_smoke_metrics.py` + `2026-06-13 08:41 UTC` |
-| FT5-P2-02 objective proxy gating | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/eval/test_objective.py::test_objective_proxy_unavailable_is_explicit` + `2026-06-13 08:41 UTC` |
-| FT5-P3-01 subjective eval service/API | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/eval/test_subjective.py` + `tests/api/test_routes.py::test_subjective_report_endpoint` + `2026-06-13 08:41 UTC` |
-| FT5-P3-02 release gate layering | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/api/test_release_gate.py::test_release_gate_blocks_mock_metrics` + `2026-06-13 08:41 UTC` |
+| FT5-P1-01 metric taxonomy | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/eval/test_objective.py` + `2026-06-13 08:41 UTC` |
+| FT5-P1-02 report schema fields | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_routes.py::test_subjective_report_endpoint` + `2026-06-13 08:41 UTC` |
+| FT5-P2-01 smoke evaluator | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/eval/test_smoke_metrics.py` + `2026-06-13 08:41 UTC` |
+| FT5-P2-02 objective proxy gating | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/eval/test_objective.py::test_objective_proxy_unavailable_is_explicit` + `2026-06-13 08:41 UTC` |
+| FT5-P3-01 subjective eval service/API | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/eval/test_subjective.py` + `tests/api/test_routes.py::test_subjective_report_endpoint` + `2026-06-13 08:41 UTC` |
+| FT5-P3-02 release gate layering | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/api/test_release_gate.py::test_release_gate_blocks_mock_metrics` + `2026-06-13 08:41 UTC` |
 
 ## 2. Evidence / Validation 矩阵
 
@@ -59,7 +59,7 @@
 | 收口纪律 | 兑现声明 |
 |----------|----------|
 | 每个 ✅ 归类 5 态（verified / observed-OK-at-closure / partial / 未观察 / deferred）| ✅ `observed-OK-at-closure`，短途测试已通过；live/manual evidence 标 pending |
-| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 952fbc5`，本轮未请求 commit |
+| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD {HEAD}`，本轮未请求 commit |
 | scope diff 守卫（`git diff --stat` 与 in-scope 一致，无越界修改）| ✅ 改动限 FT5 AP 指定 eval/report/policy/API/tests |
 | deferred 已三分类（A/B/C）且每项有承接位置 | ✅ |
 | owner-test 项未经 owner 复测的标 ⏸ PENDING（无「我修了」式宣称）| N/A |

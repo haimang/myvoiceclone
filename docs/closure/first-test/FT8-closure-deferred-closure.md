@@ -21,12 +21,12 @@
 
 | Item | 状态 | 证据（commit + query/test + run-time） |
 |------|------|----------------------------------------|
-| FT8-P1-01 first-build deferred reconciliation | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-build/deferred-items-ledger.md#6-first-test-reconciliation-snapshot2026-06-13` + `2026-06-13 08:57 UTC` |
-| FT8-P1-02 retained deferred boundary | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/deferred-items-ledger.md` + `2026-06-13 08:57 UTC` |
-| FT8-P2-01 first-test closure ledger | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/first-test-closure.md` + `2026-06-13 08:57 UTC` |
-| FT8-P2-02 first-test deferred ledger | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/closure/first-test/deferred-items-ledger.md` + `2026-06-13 08:57 UTC` |
-| FT8-P3-01 final input pack index | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `docs/eval/first-test/final-input-pack.md` + `2026-06-13 08:57 UTC` |
-| FT8-P3-02 docs/check | ✅ closed | `uncommitted working tree on HEAD 952fbc5` + `tests/unit/test_first_test_closure_docs.py` + `2026-06-13 08:57 UTC` |
+| FT8-P1-01 first-build deferred reconciliation | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `docs/closure/first-build/deferred-items-ledger.md#6-first-test-reconciliation-snapshot2026-06-13` + `2026-06-13 08:57 UTC` |
+| FT8-P1-02 retained deferred boundary | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `docs/closure/first-test/deferred-items-ledger.md` + `2026-06-13 08:57 UTC` |
+| FT8-P2-01 first-test closure ledger | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `docs/closure/first-test/first-test-closure.md` + `2026-06-13 08:57 UTC` |
+| FT8-P2-02 first-test deferred ledger | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `docs/closure/first-test/deferred-items-ledger.md` + `2026-06-13 08:57 UTC` |
+| FT8-P3-01 final input pack index | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `docs/eval/first-test/final-input-pack.md` + `2026-06-13 08:57 UTC` |
+| FT8-P3-02 docs/check | ✅ closed | `uncommitted working tree on HEAD {HEAD}` + `tests/unit/test_first_test_closure_docs.py` + `2026-06-13 08:57 UTC` |
 
 ## 2. Evidence / Validation 矩阵
 
@@ -59,7 +59,7 @@
 | 收口纪律 | 兑现声明 |
 |----------|----------|
 | 每个 ✅ 归类 5 态（verified / observed-OK-at-closure / partial / 未观察 / deferred）| ✅ `observed-OK-at-closure` for docs/check artifacts; live full close remains pending |
-| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD 952fbc5`，本轮未请求 commit |
+| ✅ 证据为四元组（commit + query/test + run-time），无裸 file:line | ⚠ 使用 `uncommitted working tree on HEAD {HEAD}`，本轮未请求 commit |
 | scope diff 守卫（`git diff --stat` 与 in-scope 一致，无越界修改）| ✅ FT8 改动集中在 closure/deferred/final-input/docs-check |
 | deferred 已三分类（A/B/C）且每项有承接位置 | ✅ |
 | owner-test 项未经 owner 复测的标 ⏸ PENDING（无「我修了」式宣称）| ✅ live full-close gate pending |
