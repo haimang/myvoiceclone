@@ -1,5 +1,6 @@
 import pytest
 import os
+from myvoiceclone.ids import is_mvc_id
 from myvoiceclone.pipelines.ingest import run_ingest
 from myvoiceclone.adapters.audio.ffmpeg import FFmpegAdapter
 
@@ -10,7 +11,7 @@ def test_ingest_lifecycle(db_conn, artifact_store, synthetic_wav):
     # Ingest for the first time
     rec1 = run_ingest(db_conn, artifact_store, ffmpeg_adapter, synthetic_wav)
     
-    assert rec1.id.startswith("rec_")
+    assert is_mvc_id(rec1.id)
     assert rec1.status == "processed"
     assert rec1.sample_rate == 16000
     assert rec1.channels == 1

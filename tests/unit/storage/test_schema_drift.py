@@ -31,6 +31,14 @@ def test_first_test_schema_inventory(tmp_path):
             actual = {row["name"] for row in rows}
             assert columns <= actual, f"{table} missing {columns - actual}"
 
+        id_columns = {}
+        for table in ("job_events", "eval_metrics", "policy_events"):
+            rows = conn.execute(f"PRAGMA table_info({table});").fetchall()
+            id_columns[table] = next(row for row in rows if row["name"] == "id")
+        assert id_columns["job_events"]["type"].upper() == "TEXT"
+        assert id_columns["eval_metrics"]["type"].upper() == "TEXT"
+        assert id_columns["policy_events"]["type"].upper() == "TEXT"
+
         indexes = {row["name"] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index';")}
         assert {"idx_job_events_job", "idx_job_events_type", "idx_eval_metrics_run_name"} <= indexes
     finally:

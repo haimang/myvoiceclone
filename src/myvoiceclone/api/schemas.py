@@ -136,6 +136,7 @@ class StartInferenceRequest(BaseModel):
     source_artifact_id: Optional[str] = None
     language: str = "en"
     adapter_mode: str = "real"
+    start_immediately: bool = False
 
 class StartEvalRequest(BaseModel):
     inference_artifact_id: str
@@ -150,6 +151,10 @@ class RunStatusResponse(BaseModel):
     artifacts: List[Dict[str, Any]] = []
     failure_summary: Dict[str, Any] = {}
     links: Dict[str, str] = {}
+
+class PromoteReferenceAudioRequest(BaseModel):
+    artifact_id: str
+    name: Optional[str] = None
 
 class ReportResponse(BaseModel):
     id: str

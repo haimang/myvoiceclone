@@ -1,17 +1,18 @@
-import uuid
-
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from myvoiceclone.api.audit import ApiAuditMiddleware
 from myvoiceclone.api.routes_recordings import router as recordings_router
 from myvoiceclone.api.routes_segments import router as segments_router
 from myvoiceclone.api.routes_datasets import router as datasets_router
 from myvoiceclone.api.routes_jobs import router as jobs_router
 from myvoiceclone.api.routes_training import router as training_router
 from myvoiceclone.api.routes_inference import router as inference_router
+from myvoiceclone.api.routes_artifacts import router as artifacts_router
 from myvoiceclone.api.routes_reports import router as reports_router
 from myvoiceclone.api.routes_runs import router as runs_router
 from myvoiceclone.errors import VoiceCloneError
+from myvoiceclone.ids import new_id
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -19,6 +20,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         description="Local engineering workbench for high-fidelity voice cloning"
     )
+    app.add_middleware(ApiAuditMiddleware)
     
     # Register routers
     app.include_router(recordings_router, prefix="/api")
@@ -27,12 +29,13 @@ def create_app() -> FastAPI:
     app.include_router(jobs_router, prefix="/api")
     app.include_router(training_router, prefix="/api")
     app.include_router(inference_router, prefix="/api")
+    app.include_router(artifacts_router, prefix="/api")
     app.include_router(reports_router, prefix="/api")
     app.include_router(runs_router, prefix="/api")
 
     @app.exception_handler(VoiceCloneError)
     async def voiceclone_error_handler(request: Request, exc: VoiceCloneError):
-        trace_id = request.headers.get("x-trace-id") or uuid.uuid4().hex
+        trace_id = getattr(request.state, "trace_id", None) or new_id()
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -49,14 +52,19 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(HTTPException)
     async def http_error_handler(request: Request, exc: HTTPException):
-        trace_id = request.headers.get("x-trace-id") or uuid.uuid4().hex
+        trace_id = getattr(request.state, "trace_id", None) or new_id()
         message = exc.detail if isinstance(exc.detail, str) else "HTTP error"
+        code = None
+        if isinstance(exc.detail, dict):
+            error = exc.detail.get("error")
+            if isinstance(error, dict):
+                code = error.get("code")
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "detail": exc.detail,
                 "error": {
-                    "code": "http_error",
+                    "code": code or "http_error",
                     "message": message,
                     "trace_id": trace_id,
                     "detail": {"status_code": exc.status_code},
@@ -65,9 +73,26 @@ def create_app() -> FastAPI:
             headers={"x-trace-id": trace_id},
         )
 
+    @app.exception_handler(Exception)
+    async def unhandled_error_handler(request: Request, exc: Exception):
+        trace_id = getattr(request.state, "trace_id", None) or new_id()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Internal server error",
+                "error": {
+                    "code": "internal_error",
+                    "message": "Internal server error",
+                    "trace_id": trace_id,
+                    "detail": {"error_type": type(exc).__name__},
+                },
+            },
+            headers={"x-trace-id": trace_id},
+        )
+
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(request: Request, exc: RequestValidationError):
-        trace_id = request.headers.get("x-trace-id") or uuid.uuid4().hex
+        trace_id = getattr(request.state, "trace_id", None) or new_id()
         return JSONResponse(
             status_code=422,
             content={

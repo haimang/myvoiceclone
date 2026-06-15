@@ -91,7 +91,7 @@ class Job:
 
 @dataclass
 class JobEvent:
-    id: Optional[int]
+    id: Optional[str]
     job_id: str
     event_type: str
     status_from: Optional[str]

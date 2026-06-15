@@ -9,11 +9,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from myvoiceclone.config import resolve_artifact_root, resolve_db_path, resolve_models_dir
+from myvoiceclone.config import (
+    resolve_artifact_root,
+    resolve_db_path,
+    resolve_evidence_root,
+    resolve_models_dir,
+)
+from myvoiceclone.ids import is_mvc_id, new_id
 from myvoiceclone.storage.repositories import json_to_dict
 
 
-DEFAULT_EVIDENCE_ROOT = Path(os.getenv("EVIDENCE_ROOT", "/app/test-runs"))
+DEFAULT_EVIDENCE_ROOT = resolve_evidence_root()
 REQUIRED_EVIDENCE_FILES = [
     "manifest.json",
     "env.json",
@@ -39,8 +45,7 @@ def utc_now() -> str:
 
 
 def default_run_id(prefix: str = "first-test") -> str:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return f"{prefix}-{stamp}"
+    return new_id()
 
 
 def _git_value(args: List[str], cwd: Optional[Path] = None) -> str:
@@ -176,7 +181,7 @@ def collect_evidence_pack(
     adapter_mode: str = "real",
     status: str = "collected",
 ) -> Path:
-    run_id = run_id or default_run_id()
+    run_id = run_id if is_mvc_id(run_id) else default_run_id()
     output_dir = Path(output_root or DEFAULT_EVIDENCE_ROOT) / run_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -210,6 +215,7 @@ def collect_evidence_pack(
                 "DB_PATH",
                 "ARTIFACT_ROOT",
                 "MODELS_DIR",
+                "EVIDENCE_ROOT",
                 "MOCK_ADAPTERS",
                 "RUN_LIVE_HTTP",
                 "RUN_FIRST_TEST_CAPSTONE",

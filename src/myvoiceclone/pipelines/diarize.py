@@ -1,5 +1,4 @@
 import json
-import uuid
 import sqlite3
 from typing import List
 from myvoiceclone.domain.entities import Segment, Speaker
@@ -8,6 +7,7 @@ from myvoiceclone.pipelines.status import mark_recording_status
 from myvoiceclone.storage.repositories import RecordingRepository, SegmentRepository, SpeakerRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.diarization.pyannote_adapter import PyannoteAdapter
+from myvoiceclone.ids import is_mvc_id, new_id
 
 def run_diarize(
     conn: sqlite3.Connection,
@@ -57,22 +57,25 @@ def run_diarize(
     )
     
     segments = []
+    external_speakers = {}
     for turn in turns:
+        speaker_id = turn.speaker_id if is_mvc_id(turn.speaker_id) else external_speakers.setdefault(turn.speaker_id, new_id())
         # Check and save speaker
-        speaker = spk_repo.get_by_id(turn.speaker_id)
+        speaker = spk_repo.get_by_id(speaker_id)
         if not speaker:
             speaker = Speaker(
-                id=turn.speaker_id,
+                id=speaker_id,
                 display_name=f"Speaker {turn.speaker_id[-6:] if len(turn.speaker_id) > 6 else turn.speaker_id}",
                 role="other"
             )
+            speaker.metadata_json["external_speaker_id"] = turn.speaker_id
             spk_repo.save(speaker)
             
-        seg_id = f"seg_{uuid.uuid4().hex[:12]}"
+        seg_id = new_id()
         seg = Segment(
             id=seg_id,
             recording_id=recording_id,
-            speaker_id=turn.speaker_id,
+            speaker_id=speaker_id,
             start_sec=turn.start_sec,
             end_sec=turn.end_sec,
             audio_artifact_id=None,

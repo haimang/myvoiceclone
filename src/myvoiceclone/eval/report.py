@@ -4,6 +4,7 @@ from typing import Dict, Any
 from myvoiceclone.domain.entities import Report, Artifact, ModelRun
 from myvoiceclone.storage.repositories import ReportRepository, DatasetRepository, ModelRunRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
+from myvoiceclone.ids import new_id
 
 def generate_corpus_report(
     conn: sqlite3.Connection,
@@ -134,8 +135,8 @@ def generate_eval_pack(
         {"id": "p2", "text": "今天天气非常晴朗，我们一起出去玩吧。"}
     ]
     ref_clips = [
-        {"id": "ref1", "uri": "data/raw/ref1.wav"},
-        {"id": "ref2", "uri": "data/raw/ref2.wav"}
+        {"id": "ref1", "uri": ".data/raw/ref1.wav"},
+        {"id": "ref2", "uri": ".data/raw/ref2.wav"}
     ]
     
     pack_data = {
@@ -223,7 +224,7 @@ def generate_baseline_report(
                 if cursor.fetchone()[0] == 0:
                     conn.execute(
                         "INSERT INTO eval_samples (id, run_id, prompt, audio_artifact_id) VALUES (?, ?, ?, ?);",
-                        (f"sample_{run_id}", run_id, "Mock evaluation prompt", rendered_art_id)
+                        (new_id(), run_id, "Mock evaluation prompt", rendered_art_id)
                     )
                     
         runs_data.append({
@@ -333,7 +334,8 @@ def evaluate_long_train_gate(
         }
     }
     
-    gate_report_id = f"gate_{baseline_report_id}"
+    gate_report_id = new_id()
+    result["gate_report_id"] = gate_report_id
     gate_report = Report(
         id=gate_report_id,
         name=f"Long Train Gate - {dataset_id}",
@@ -454,5 +456,3 @@ def generate_train_report(
     report_repo.save(draft_report)
     conn.commit()
     return draft_report
-
-

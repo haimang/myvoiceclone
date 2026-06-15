@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 from myvoiceclone.domain.entities import Artifact
 from myvoiceclone.storage.repositories import dict_to_json, json_to_dict, parse_datetime
 from myvoiceclone.config import resolve_mock_adapters
+from myvoiceclone.ids import new_id
 
 class ArtifactStore:
     def __init__(self, conn: sqlite3.Connection, root_dir: str):
@@ -26,8 +27,7 @@ class ArtifactStore:
         size_bytes = len(content)
         
         # Generate unique artifact ID
-        import uuid
-        artifact_id = f"art_{uuid.uuid4().hex[:12]}"
+        artifact_id = new_id()
         
         # Determine target file path
         rel_dir = os.path.join(artifact_type)

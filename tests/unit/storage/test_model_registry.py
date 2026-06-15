@@ -4,7 +4,7 @@ from myvoiceclone.domain.entities import Dataset, ModelRun
 from myvoiceclone.storage.repositories import DatasetRepository, ModelRunRepository
 from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
 from myvoiceclone.pipelines.train import run_train_sovits
-from myvoiceclone.config import get_project_root
+from myvoiceclone.config import resolve_models_dir
 
 @pytest.mark.unit
 def test_model_registry_file_and_db_alignment(db_conn, artifact_store):
@@ -35,7 +35,7 @@ def test_model_registry_file_and_db_alignment(db_conn, artifact_store):
     assert art.name == "sovits_reg_model_final.pth"
     
     # Verify local file registry directory alignment
-    registry_file_path = os.path.join(get_project_root(), "models", "registry", "sovits_reg_model_final.pth")
+    registry_file_path = os.path.join(resolve_models_dir(), "registry", "sovits_reg_model_final.pth")
     assert os.path.exists(registry_file_path)
     
     # Clean up local file generated during test

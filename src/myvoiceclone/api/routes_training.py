@@ -1,4 +1,3 @@
-import uuid
 import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
@@ -7,6 +6,7 @@ from myvoiceclone.api.schemas import ModelRunResponse, JobResponse
 from myvoiceclone.domain.entities import Job
 from myvoiceclone.domain.states import JobStatus
 from myvoiceclone.storage.repositories import ModelRunRepository, JobRepository
+from myvoiceclone.ids import new_id
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/training", tags=["training"])
@@ -41,7 +41,7 @@ def get_run(run_id: str, db: sqlite3.Connection = Depends(get_db)):
 @router.post("/jobs", response_model=JobResponse)
 def create_training_job(req: TrainJobCreate, db: sqlite3.Connection = Depends(get_db)):
     job_repo = JobRepository(db)
-    job_id = f"job_{uuid.uuid4().hex[:12]}"
+    job_id = new_id()
     job = Job(
         id=job_id,
         name="train_sovits",

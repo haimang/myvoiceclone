@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime
 from myvoiceclone.domain.entities import ModelRun, TrainRequest, ConvertRequest, SynthRequest
@@ -11,6 +10,7 @@ from myvoiceclone.adapters.training.rvc_adapter import RvcAdapter
 from myvoiceclone.adapters.training.xtts_adapter import XttsAdapter
 from myvoiceclone.adapters.training.sovits_adapter import SovitsAdapter
 from myvoiceclone.config import resolve_mock_adapters
+from myvoiceclone.ids import new_id
 
 def run_train_rvc(
     conn: sqlite3.Connection,
@@ -37,7 +37,7 @@ def run_train_rvc(
         raise ValueError(f"Dataset {dataset_id} must be frozen before training. Current status: {ds.status}")
 
     run_repo = ModelRunRepository(conn)
-    run_id = model_run_id or f"run_{uuid.uuid4().hex[:12]}"
+    run_id = model_run_id or new_id()
     
     run = ModelRun(
         id=run_id,
@@ -146,7 +146,7 @@ def run_synth_xtts(
         xtts_adapter = XttsAdapter()
         
     run_repo = ModelRunRepository(conn)
-    run_id = f"run_{uuid.uuid4().hex[:12]}"
+    run_id = new_id()
     
     run = ModelRun(
         id=run_id,
@@ -326,7 +326,7 @@ def run_train_sovits(
             run.status = ModelRunStatus.QUEUED.value
             run.model_family = run.model_family or "sovits"
     else:
-        model_run_id = f"run_{uuid.uuid4().hex[:12]}"
+        model_run_id = new_id()
         run = ModelRun(id=model_run_id, name=model_name, dataset_id=dataset_id, status=ModelRunStatus.QUEUED.value, config_json=config, model_family="sovits")
         
     run_repo.save(run)

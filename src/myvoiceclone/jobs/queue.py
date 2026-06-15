@@ -1,10 +1,10 @@
-import uuid
 import sqlite3
 from typing import Dict, Any
 from myvoiceclone.domain.entities import Job
 from myvoiceclone.domain.states import JobStatus
 from myvoiceclone.storage.repositories import JobRepository
 from myvoiceclone.jobs.events import write_job_event
+from myvoiceclone.ids import new_id
 
 class JobQueue:
     def __init__(self, conn: sqlite3.Connection):
@@ -12,7 +12,7 @@ class JobQueue:
         self.repo = JobRepository(conn)
 
     def enqueue(self, name: str, payload_json: Dict[str, Any]) -> Job:
-        job_id = f"job_{uuid.uuid4().hex[:12]}"
+        job_id = new_id()
         job = Job(
             id=job_id,
             name=name,

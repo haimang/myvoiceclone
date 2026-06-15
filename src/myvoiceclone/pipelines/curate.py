@@ -1,4 +1,3 @@
-import uuid
 import sqlite3
 from typing import List, Optional, Dict, Any
 from myvoiceclone.domain.entities import Segment, Speaker
@@ -8,6 +7,7 @@ from myvoiceclone.storage.repositories import SegmentRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.storage.vector_store import VectorStore
 from myvoiceclone.adapters.embeddings.audio_embedder import AudioEmbedder
+from myvoiceclone.ids import new_id
 
 def update_segment_status(
     conn: sqlite3.Connection,
@@ -40,7 +40,7 @@ def update_segment_status(
     repo.save(seg)
 
     # Write append-only segment review audit entry
-    rev_id = f"rev_{uuid.uuid4().hex[:12]}"
+    rev_id = new_id()
     conn.execute(
         """
         INSERT INTO segment_reviews (id, segment_id, status_from, status_to, reason, reviewer)

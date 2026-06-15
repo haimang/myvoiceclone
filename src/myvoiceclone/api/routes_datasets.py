@@ -1,4 +1,3 @@
-import uuid
 import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
@@ -6,6 +5,7 @@ from myvoiceclone.api.dependencies import get_db
 from myvoiceclone.api.schemas import DatasetResponse, DatasetCreate
 from myvoiceclone.domain.entities import Dataset
 from myvoiceclone.domain.states import DatasetStatus
+from myvoiceclone.ids import new_id
 from myvoiceclone.storage.repositories import DatasetRepository
 # V5 fix: replaced direct pipeline import with domain service
 from myvoiceclone.services import service_export_dataset
@@ -28,7 +28,7 @@ def get_dataset(dataset_id: str, db: sqlite3.Connection = Depends(get_db)):
 @router.post("", response_model=DatasetResponse)
 def create_dataset(req: DatasetCreate, db: sqlite3.Connection = Depends(get_db)):
     repo = DatasetRepository(db)
-    ds_id = f"ds_{uuid.uuid4().hex[:12]}"
+    ds_id = new_id()
     ds = Dataset(
         id=ds_id,
         name=req.name,

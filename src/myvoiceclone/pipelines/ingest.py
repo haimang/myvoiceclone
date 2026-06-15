@@ -1,6 +1,5 @@
 import os
 import hashlib
-import uuid
 import shutil
 import sqlite3
 from myvoiceclone.domain.entities import Recording, Artifact
@@ -8,6 +7,7 @@ from myvoiceclone.domain.states import RecordingStatus
 from myvoiceclone.storage.repositories import RecordingRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.adapters.audio.ffmpeg import FFmpegAdapter
+from myvoiceclone.ids import new_id
 
 def compute_sha256(filepath: str) -> str:
     hasher = hashlib.sha256()
@@ -38,7 +38,7 @@ def run_ingest(
         return repo.get_by_id(row["id"])
         
     # Create new recording record
-    rec_id = f"rec_{uuid.uuid4().hex[:12]}"
+    rec_id = new_id()
     
     # Probe audio
     probe_info = ffmpeg_adapter.probe(filepath)

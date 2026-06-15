@@ -34,14 +34,20 @@ def test_compose_mounts_configs_readonly_and_evidence_root():
     compose = read("infra/docker/compose.yaml")
 
     assert "../../configs:/app/configs:ro" in compose
-    assert "/mnt/usb/workspace/myvoiceresearch/test-runs:/mnt/usb/workspace/myvoiceresearch/test-runs" in compose
     assert "runtime: nvidia" in compose
+    assert ".data/db:/app/db" in compose
+    assert ".data/artifacts:/app/data/artifacts" in compose
+    assert ".data/models:/app/models" in compose
+    assert ".data/test-runs:/app/test-runs" in compose
+    assert "MOCK_ADAPTERS=${MOCK_ADAPTERS:-false}" in compose
 
 
 @pytest.mark.unit
 def test_dockerignore_excludes_heavy_local_artifacts_but_keeps_migrations():
     dockerignore = read(".dockerignore")
 
-    for pattern in [".git/", "venv/", ".venv/", "data/", "models/", "*.wav", "*.pt", "*.ckpt"]:
+    for pattern in [".git/", "venv/", ".venv/", ".data/", "*.wav", "*.pt", "*.ckpt"]:
         assert pattern in dockerignore
+    assert "data/" not in dockerignore.splitlines()
+    assert "models/" not in dockerignore.splitlines()
     assert "!db/migrations/" in dockerignore

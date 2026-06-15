@@ -3,6 +3,7 @@ import json
 from typing import Dict, Any
 from myvoiceclone.storage.repositories import ModelRunRepository
 from myvoiceclone.storage.artifact_store import ArtifactStore
+from myvoiceclone.ids import new_id
 
 
 def evaluate_objective_proxy(
@@ -92,7 +93,7 @@ def evaluate_objective_metrics(
         )
         
     # Link to eval_samples
-    sample_id = f"sample_{run_id}_{uuid_hex()}"
+    sample_id = new_id()
     conn.execute(
         """
         INSERT INTO eval_samples (
@@ -124,7 +125,3 @@ def evaluate_objective_metrics(
         "metrics": metrics,
         "sample_id": sample_id
     }
-
-def uuid_hex() -> str:
-    import uuid
-    return uuid.uuid4().hex[:12]

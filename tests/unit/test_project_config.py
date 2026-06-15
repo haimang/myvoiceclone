@@ -16,13 +16,16 @@ def test_local_config():
     assert "db_path" in cfg
     assert "artifact_root" in cfg
     assert "models_dir" in cfg
-    assert cfg["db_path"] == "db/myvoiceclone.sqlite"
+    assert cfg["db_path"] == ".data/db/myvoiceclone.sqlite"
 
 @pytest.mark.unit
 def test_models_config():
     cfg = load_models_config()
     assert "pretrained_dir" in cfg
     assert "checkpoints_dir" in cfg
+    assert cfg["pretrained_dir"] == ".data/models/pretrained"
+    assert cfg["checkpoints_dir"] == ".data/models/checkpoints"
+    assert cfg["registry_dir"] == ".data/models/registry"
     assert "pyannote" in cfg
     assert "whisper" in cfg
     assert cfg["pyannote"]["model_id"] == "pyannote/speaker-diarization-3.1"

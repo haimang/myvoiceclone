@@ -3,6 +3,7 @@ import pytest
 from myvoiceclone.storage.sqlite import get_connection
 from myvoiceclone.storage.migrations import run_migrations
 from myvoiceclone.storage.artifact_store import ArtifactStore
+from myvoiceclone.ids import is_mvc_id
 
 @pytest.fixture
 def db_conn(tmp_path):
@@ -28,7 +29,7 @@ def test_artifact_store_lifecycle(db_conn, tmp_path):
         metadata_json={"channels": 1}
     )
     
-    assert parent.id.startswith("art_")
+    assert is_mvc_id(parent.id)
     assert parent.name == "original.wav"
     assert parent.sha256 is not None
     assert parent.bytes == len(content)

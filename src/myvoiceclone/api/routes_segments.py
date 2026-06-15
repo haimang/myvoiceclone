@@ -1,10 +1,10 @@
-import uuid
 import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Optional
 from myvoiceclone.api.dependencies import get_db
 from myvoiceclone.api.schemas import SegmentResponse, SegmentReviewUpdate
 from myvoiceclone.domain.entities import Segment
+from myvoiceclone.ids import new_id
 from myvoiceclone.storage.repositories import SegmentRepository
 
 router = APIRouter(prefix="/segments", tags=["segments"])
@@ -34,7 +34,7 @@ def review_segment(segment_id: str, review: SegmentReviewUpdate, db: sqlite3.Con
     repo.save(seg)
     
     # Save review record
-    review_id = f"rev_{uuid.uuid4().hex[:12]}"
+    review_id = new_id()
     db.execute(
         """
         INSERT INTO segment_reviews (id, segment_id, status_from, status_to, reason, reviewer)

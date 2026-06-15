@@ -162,7 +162,16 @@ def test_job_runner_cancel_capture(db_conn, artifact_store, monkeypatch):
     assert "Cancelled by user" in job.error_msg
     
     cursor = db_conn.cursor()
-    cursor.execute("SELECT event_type, status_to FROM job_events WHERE job_id = ? ORDER BY id DESC LIMIT 1;", (job_id,))
+    cursor.execute(
+        """
+        SELECT event_type, status_to
+        FROM job_events
+        WHERE job_id = ?
+        ORDER BY datetime(created_at) DESC, rowid DESC
+        LIMIT 1;
+        """,
+        (job_id,),
+    )
     event = cursor.fetchone()
     assert event["event_type"] == "cancel"
     assert event["status_to"] == "cancelled"

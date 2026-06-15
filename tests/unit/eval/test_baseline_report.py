@@ -1,6 +1,7 @@
 import os
 import pytest
 import json
+from myvoiceclone.ids import is_mvc_id
 from myvoiceclone.domain.entities import Dataset, ModelRun, Report
 from myvoiceclone.storage.repositories import DatasetRepository, ModelRunRepository, ReportRepository
 from myvoiceclone.eval.report import generate_eval_pack, generate_baseline_report, evaluate_long_train_gate
@@ -103,10 +104,11 @@ def test_long_train_gate_logic(db_conn, artifact_store):
     assert gate_result["data_quality_ok"] is True
     assert gate_result["learnability_ok"] is True
     assert gate_result["environment_ok"] is True
+    assert is_mvc_id(gate_result["gate_report_id"])
 
     # 4. Check report entry in DB
     report_repo = ReportRepository(db_conn)
-    gate_rpt = report_repo.get_by_id("gate_rpt_gate_baseline")
+    gate_rpt = report_repo.get_by_id(gate_result["gate_report_id"])
     assert gate_rpt is not None
     assert gate_rpt.report_type == "gate_report"
     assert gate_rpt.summary_json["long_train_ready"] is True

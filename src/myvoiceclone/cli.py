@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import uuid
 import typer
 from typing import Optional, List
 from myvoiceclone.config import resolve_artifact_root, resolve_db_path
@@ -11,6 +10,7 @@ from myvoiceclone.storage.repositories import JobRepository, DatasetRepository, 
 from myvoiceclone.domain.entities import Job, Dataset, ModelRun
 from myvoiceclone.domain.states import DatasetStatus, JobStatus, SegmentStatus
 from myvoiceclone.jobs.runner import JobRunner
+from myvoiceclone.ids import new_id
 
 # No adapter imports here to comply with architecture rules
 
@@ -37,12 +37,24 @@ app.add_typer(report_app, name="report")
 def get_db_conn():
     return get_connection(resolve_db_path(), load_vec=True)
 
+def resolve_migrations_dir() -> str:
+    candidates = [
+        os.environ.get("MIGRATIONS_DIR"),
+        os.path.join(os.getcwd(), "db", "migrations"),
+        "/app/db/migrations",
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "db", "migrations"),
+    ]
+    for candidate in candidates:
+        if candidate and os.path.isdir(candidate):
+            return candidate
+    return candidates[-1]
+
 @app.command("init-db")
 def init_db(db: Optional[str] = typer.Option(None, help="Database path")):
     db_path = resolve_db_path(db)
         
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    migrations_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "db", "migrations")
+    migrations_dir = resolve_migrations_dir()
     
     typer.echo(f"Initializing database at: {db_path}")
     run_migrations(db_path, migrations_dir)
@@ -73,7 +85,7 @@ def ingest(filepath: str, dry_run: bool = typer.Option(False, "--dry-run", help=
     conn = get_db_conn()
     try:
         job_repo = JobRepository(conn)
-        job_id = f"job_{uuid.uuid4().hex[:12]}"
+        job_id = new_id()
         job = Job(id=job_id, name="ingest", status=JobStatus.PENDING.value, payload_json={"filepath": filepath})
         job_repo.save(job)
         conn.commit()
@@ -115,7 +127,7 @@ def _run_step_job(name: str, payload: dict):
     conn = get_db_conn()
     try:
         job_repo = JobRepository(conn)
-        job_id = f"job_{uuid.uuid4().hex[:12]}"
+        job_id = new_id()
         job = Job(id=job_id, name=name, status=JobStatus.PENDING.value, payload_json=payload)
         job_repo.save(job)
         conn.commit()
@@ -156,7 +168,7 @@ def curate_mark(segment_id: str, status: str = typer.Option(..., help="New statu
         seg.status = status
         seg_repo.save(seg)
         
-        review_id = f"rev_{uuid.uuid4().hex[:12]}"
+        review_id = new_id()
         conn.execute(
             """
             INSERT INTO segment_reviews (id, segment_id, status_from, status_to, reason, reviewer)
@@ -174,7 +186,7 @@ def dataset_create(name: str, filter_status: str = typer.Option(SegmentStatus.KE
     conn = get_db_conn()
     try:
         repo = DatasetRepository(conn)
-        ds_id = f"ds_{uuid.uuid4().hex[:12]}"
+        ds_id = new_id()
         ds = Dataset(id=ds_id, name=name, status=DatasetStatus.ACTIVE.value, filter_json={"status": filter_status})
         
         cursor = conn.cursor()

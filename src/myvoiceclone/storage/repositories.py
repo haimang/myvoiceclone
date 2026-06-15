@@ -416,7 +416,9 @@ class JobRepository:
         cursor.execute(
             """
             SELECT id, job_id, event_type, status_from, status_to, message, metadata_json, created_at
-            FROM job_events WHERE job_id = ? ORDER BY id;
+            FROM job_events
+            WHERE job_id = ?
+            ORDER BY datetime(created_at), rowid;
             """,
             (job_id,),
         )

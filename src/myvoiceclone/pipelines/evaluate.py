@@ -1,10 +1,10 @@
 import sqlite3
 import json
-import uuid
 from typing import Dict, Any
 from myvoiceclone.storage.artifact_store import ArtifactStore
 from myvoiceclone.eval.objective import evaluate_objective_metrics
 from myvoiceclone.eval.smoke import evaluate_wav_smoke
+from myvoiceclone.ids import new_id
 
 def run_evaluation(
     conn: sqlite3.Connection,
@@ -48,7 +48,7 @@ def run_first_test_evaluation(
     metrics["reference_artifact_id"] = reference_artifact_id
     metrics["job_id"] = job_id
 
-    report_id = f"report_{uuid.uuid4().hex[:12]}"
+    report_id = new_id()
     conn.execute(
         """
         INSERT INTO reports (id, name, report_type, kind, subject_type, subject_id, status, summary_json, artifact_id)

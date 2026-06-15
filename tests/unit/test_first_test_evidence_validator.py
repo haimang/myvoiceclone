@@ -4,7 +4,8 @@ import sqlite3
 
 import pytest
 
-from myvoiceclone.evidence import collect_evidence_pack, validate_evidence_pack
+from myvoiceclone.evidence import collect_evidence_pack, default_run_id, validate_evidence_pack
+from myvoiceclone.ids import is_mvc_id
 
 
 @pytest.mark.unit
@@ -34,6 +35,22 @@ def test_evidence_exporter_writes_required_files(tmp_path, monkeypatch):
     assert env["resolved"]["ARTIFACT_ROOT"] == str(tmp_path / "artifacts")
     result = validate_evidence_pack(str(pack), repo_root=str(tmp_path))
     assert result.ok, result.errors
+    assert is_mvc_id(json.loads((pack / "manifest.json").read_text(encoding="utf-8"))["run_id"])
+
+
+@pytest.mark.unit
+def test_evidence_default_run_id_uses_mvc_uuid(tmp_path):
+    assert is_mvc_id(default_run_id())
+
+    pack = collect_evidence_pack(
+        run_id="legacy_run_name",
+        output_root=str(tmp_path / "runs"),
+        skip_reason="legacy run id normalized",
+    )
+    manifest = json.loads((pack / "manifest.json").read_text(encoding="utf-8"))
+
+    assert is_mvc_id(manifest["run_id"])
+    assert pack.name == manifest["run_id"]
 
 
 @pytest.mark.unit
@@ -165,4 +182,4 @@ def test_collect_first_test_evidence_script_contract():
 
     assert "myvoiceclone.evidence collect" in text
     assert "myvoiceclone.evidence validate" in text
-    assert "/mnt/usb/workspace/myvoiceresearch/test-runs" in text
+    assert "/app/test-runs" in text or ".data/test-runs" in text
