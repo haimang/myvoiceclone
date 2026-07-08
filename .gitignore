@@ -78,3 +78,6 @@ Thumbs.db
 # config
 .env
 CHECKLIST.md
+
+# other
+.adocs/
