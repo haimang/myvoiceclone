@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
+
+CONTAINER="${CONTAINER:-ai-voiceclone}"
 
 DRY_RUN=0
 FILEPATH=""
 for arg in "$@"; do
-  if [ "$arg" == "--dry-run" ]; then
+  if [ "$arg" = "--dry-run" ]; then
     DRY_RUN=1
   else
     FILEPATH="$arg"
@@ -18,9 +20,9 @@ if [ -z "$FILEPATH" ]; then
 fi
 
 if [ $DRY_RUN -eq 1 ]; then
-  echo "[Dry-run] Would run preprocess pipeline for: $FILEPATH"
+  echo "[Dry-run] Would run preprocess pipeline inside $CONTAINER for: $FILEPATH"
   exit 0
 fi
 
-echo "Running preprocessing for $FILEPATH..."
-./venv/bin/python -m myvoiceclone.cli ingest "$FILEPATH"
+echo "Running preprocessing inside $CONTAINER for $FILEPATH..."
+docker exec "$CONTAINER" python -m myvoiceclone.cli ingest "$FILEPATH"

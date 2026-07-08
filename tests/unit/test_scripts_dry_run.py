@@ -18,9 +18,9 @@ def run_script(script_name, *args):
 @pytest.mark.unit
 def test_bootstrap_dry_run():
     output = run_script("bootstrap_env.sh", "--dry-run")
-    assert "[Dry-run] Would bootstrap" in output
-    assert "myvoiceclone[first-test]" in output
-    assert "ffmpeg ffprobe" in output
+    assert "[Dry-run] Would build ai-voiceclone container image" in output
+    assert "compose.voiceclone.yaml" in output
+    assert "Dependency probes run inside container" in output
 
 @pytest.mark.unit
 def test_download_models_dry_run():
@@ -32,9 +32,23 @@ def test_download_models_dry_run():
 @pytest.mark.unit
 def test_preprocess_dry_run():
     output = run_script("run_preprocess.sh", "fake.wav", "--dry-run")
-    assert "[Dry-run] Would run preprocess pipeline for: fake.wav" in output
+    assert "[Dry-run] Would run preprocess pipeline inside ai-voiceclone for: fake.wav" in output
 
 @pytest.mark.unit
 def test_train_dry_run():
     output = run_script("run_train_sovits.sh", "my_dataset", "--dry-run")
-    assert "[Dry-run] Would train So-VITS model on dataset: my_dataset" in output
+    assert "[Dry-run] Would train So-VITS model inside ai-voiceclone on dataset: my_dataset" in output
+
+
+@pytest.mark.unit
+def test_scripts_do_not_call_host_venv():
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    scripts_dir = os.path.join(project_root, "scripts")
+    offenders = []
+    for name in os.listdir(scripts_dir):
+        if not name.endswith(".sh"):
+            continue
+        content = open(os.path.join(scripts_dir, name), encoding="utf-8").read()
+        if "./venv/bin" in content or "python3 -m venv venv" in content:
+            offenders.append(name)
+    assert offenders == []

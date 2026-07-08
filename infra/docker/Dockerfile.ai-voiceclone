@@ -1,0 +1,30 @@
+# Dedicated myvoiceclone runtime for the ai-voiceclone service.
+#
+# NF1 uses a local cu130 substrate retagged as ai-voiceclone-base:cu130.
+# The historical docker-train tag is removed after ai-voiceclone verification.
+ARG TRAIN_BASE_IMAGE=ai-voiceclone-base:cu130
+FROM ${TRAIN_BASE_IMAGE}
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+COPY src/ ./src/
+COPY db/migrations ./db/migrations
+COPY db/migrations ./db-migrations
+
+RUN python -m pip install --no-cache-dir --timeout 300 --retries 5 ".[cli,db,api,test]" soundfile
+
+COPY configs ./configs
+COPY docs ./docs
+COPY infra ./infra
+COPY scripts ./scripts
+COPY tests ./tests
+COPY README.md pytest.ini .dockerignore .env.example ./
+
+EXPOSE 658
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import json, urllib.request; data=json.loads(urllib.request.urlopen('http://127.0.0.1:658/health', timeout=5).read().decode()); assert data['status'] == 'healthy'" || exit 1
+
+ENTRYPOINT []
+CMD ["python", "-m", "uvicorn", "myvoiceclone.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "658"]

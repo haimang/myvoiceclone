@@ -1,0 +1,53 @@
+# Dedicated ai-voiceclone runtime.
+#
+# NF1 invariant: this service is the only myvoiceclone execution environment
+# and exposes exactly one external port, 658.
+
+services:
+  ai-voiceclone:
+    image: ai-voiceclone:cu130
+    container_name: ai-voiceclone
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.ai-voiceclone
+      args:
+        TRAIN_BASE_IMAGE: ${TRAIN_BASE_IMAGE:-ai-voiceclone-base:cu130}
+    runtime: nvidia
+    ports:
+      - "658:658"
+    volumes:
+      - ../../.data/db:/app/.data/db
+      - ../../.data/artifacts:/app/data/artifacts
+      - ../../.data/raw:/app/data/raw
+      - ../../.data/test-runs:/app/test-runs
+      - ../../.data/models:/app/models
+      - ../../configs:/app/configs:ro
+      - ../../.git:/app/.git:ro
+    environment:
+      - DB_PATH=/app/.data/db/myvoiceclone.sqlite
+      - MIGRATIONS_DIR=/app/db-migrations
+      - ARTIFACT_ROOT=/app/data/artifacts
+      - MODELS_DIR=/app/models
+      - TTS_HOME=/app/models/coqui
+      - HF_HOME=/app/models/huggingface
+      - EVIDENCE_ROOT=/app/test-runs
+      - MOCK_ADAPTERS=${MOCK_ADAPTERS:-false}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json, urllib.request; data=json.loads(urllib.request.urlopen('http://127.0.0.1:658/health', timeout=5).read().decode()); assert data['status'] == 'healthy'",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3

@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
+
+CONTAINER="${CONTAINER:-ai-voiceclone}"
 
 DRY_RUN=0
 DATASET_ID=""
 for arg in "$@"; do
-  if [ "$arg" == "--dry-run" ]; then
+  if [ "$arg" = "--dry-run" ]; then
     DRY_RUN=1
   else
     DATASET_ID="$arg"
@@ -18,9 +20,9 @@ if [ -z "$DATASET_ID" ]; then
 fi
 
 if [ $DRY_RUN -eq 1 ]; then
-  echo "[Dry-run] Would train So-VITS model on dataset: $DATASET_ID"
+  echo "[Dry-run] Would train So-VITS model inside $CONTAINER on dataset: $DATASET_ID"
   exit 0
 fi
 
-echo "Running training on dataset $DATASET_ID..."
-./venv/bin/python -m myvoiceclone.cli train sovits "$DATASET_ID"
+echo "Running training inside $CONTAINER on dataset $DATASET_ID..."
+docker exec "$CONTAINER" python -m myvoiceclone.cli train sovits "$DATASET_ID"

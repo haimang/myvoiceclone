@@ -188,11 +188,12 @@ audit trace (job_events, artifacts, reports 串联)
 │   └── templates/                # 文档模板
 ├── infra/                        # 基础设施
 │   └── docker/
-│       ├── compose.yaml          # Docker Compose（preprocess/train）
+│       ├── compose.voiceclone.yaml # Docker Compose（ai-voiceclone，唯一 658 端口）
+│       ├── compose.yaml          # 历史 preprocess/train compose（非 NF1 主入口）
 │       ├── Dockerfile.preprocess # 预处理容器
 │       └── Dockerfile.train      # 训练容器（NVIDIA NGC PyTorch）
 ├── scripts/                      # 便捷脚本
-│   ├── bootstrap_env.sh          # 初始化 venv + 依赖
+│   ├── bootstrap_env.sh          # 构建并启动 ai-voiceclone 容器
 │   ├── collect_first_test_evidence.sh
 │   ├── download_models.sh        # 仅生成模型 manifest，不下载真实权重
 │   ├── run_preprocess.sh
@@ -232,7 +233,7 @@ audit trace (job_events, artifacts, reports 串联)
 │   ├── fakes/
 │   ├── fixtures/
 │   └── conftest.py
-├── venv/                         # Python 虚拟环境
+├── venv/                         # 历史宿主虚拟环境；NF1 后不再保留
 ├── .env.example
 ├── .gitignore
 ├── .dockerignore
@@ -247,19 +248,19 @@ audit trace (job_events, artifacts, reports 串联)
 
 ### 4.1 Docker Compose
 
-文件：`infra/docker/compose.yaml`
+NF1 主入口文件：`infra/docker/compose.voiceclone.yaml`
 
-| 服务 | 基础镜像 | 用途 |
+| 服务 | 镜像 | 用途 |
 |---|---|---|
-| `preprocess` | `python:3.12-slim` | 音频预处理（ingest/diarize/slice/clean/transcribe） |
-| `train` | `nvidia/cuda:13.0.0-devel-ubuntu24.04` | 真实 XTTS 推理与训练入口容器，需要 NVIDIA GPU |
+| `ai-voiceclone` | `ai-voiceclone:cu130` | API/CLI/test/DB/推理训练统一执行容器，唯一对外端口 658 |
 
 关键约定：
 
-- 两个服务都通过 volume 把项目内的 `.data/{db,artifacts,models,test-runs}` 挂载到容器内的固定路径。
-- 容器内固定路径为 `/app/db`、`/app/data/artifacts`、`/app/models`、`/app/test-runs`，在 `compose.yaml` 中写死。
+- `ai-voiceclone` 通过 volume 把项目内的 `.data/{db,artifacts,models,test-runs}` 挂载到容器内的固定路径。
+- 容器内运行库路径为 `/app/.data/db`，避免遮蔽仓库内 `/app/db/migrations`；artifacts/models/test-runs 分别挂载到 `/app/data/artifacts`、`/app/models`、`/app/test-runs`。
 - 环境变量 `DB_PATH`、`ARTIFACT_ROOT`、`MODELS_DIR`、`EVIDENCE_ROOT`、`MOCK_ADAPTERS` 在容器内固定，不可通过 `.env` 覆盖容器路径。
-- `train` 服务声明 `runtime: nvidia` 与 GPU 资源预留，需要主机安装 NVIDIA Container Toolkit。
+- `ai-voiceclone` 服务声明 `runtime: nvidia` 与 GPU 资源预留，需要主机安装 NVIDIA Container Toolkit。
+- 只发布宿主端口 `658:658`；SSH、debug、vLLM 或其他辅助端口不属于 `myvoiceclone` 运行边界。
 
 ### 4.2 环境变量 `.env.example`
 
@@ -299,7 +300,7 @@ evidence_root: ".data/test-runs"
 | 类型 | 项目内位置 | 容器内固定位置 |
 |---|---|---|
 | 代码 | `.` | `/app` |
-| 数据库 | `.data/db/myvoiceclone.sqlite` | `/app/db/myvoiceclone.sqlite` |
+| 数据库 | `.data/db/myvoiceclone.sqlite` | `/app/.data/db/myvoiceclone.sqlite` |
 | artifacts | `.data/artifacts` | `/app/data/artifacts` |
 | 模型 | `.data/models` | `/app/models` |
 | evidence | `.data/test-runs` | `/app/test-runs` |
@@ -318,7 +319,7 @@ evidence_root: ".data/test-runs"
 
 ### 5.1 Python 与构建
 
-- **Python**：>= 3.10（本地 venv 为 3.12.3）
+- **Python**：>= 3.10（NF1 后由 `ai-voiceclone` 容器提供，当前容器 Python 为 3.12 系）
 - **构建后端**：setuptools + wheel
 - **包管理**：pip + `pyproject.toml` extras
 
@@ -418,22 +419,21 @@ evidence_root: ".data/test-runs"
 
 ### 6.4 测试通过情况
 
-最近运行结果（`./venv/bin/python -m pytest -q`）：
+最近运行结果（宿主 venv 迁移前基线；NF1 收口必须以 `docker exec ai-voiceclone python -m pytest -q` 为准）：
 
 ```
-155 passed, 1 skipped, 2 deselected, 1 failed, 14 warnings
+162 passed, 1 skipped, 2 deselected, 15 warnings
 ```
 
-- 失败：1 个文档锚点测试（closure HEAD 不匹配）
 - 跳过：1 个 live capstone（未设置 `RUN_FIRST_TEST_CAPSTONE=1`）
 - deselected：2 个 live/gpu 测试（默认不包含）
 - 警告：主要是 `datetime.utcnow()` 弃用与 `httpx` 版本提示
 
-**结论：除文档锚点外，默认测试套件全部通过。**
+**结论：默认测试套件通过；NF1 后只采信容器内测试结果。**
 
 ### 6.5 是否可运行
 
-- **Mock 模式**：可直接运行。执行 `./scripts/bootstrap_env.sh && source venv/bin/activate && myvoiceclone init-db && myvoiceclone vec-health` 即可。
+- **Mock 模式**：可直接运行。执行 `./scripts/bootstrap_env.sh` 后，用 `docker exec ai-voiceclone python -m myvoiceclone.cli init-db` 和 `docker exec ai-voiceclone python -m myvoiceclone.cli vec-health` 验证。
 - **真实模式**：需要额外配置 HuggingFace Token、模型权重、CUDA 环境，当前 first-test 阶段仅部分路径可用（如 XTTS real inference 骨架已实现，但训练与 objective 评估仍为占位）。
 
 ### 6.6 主要风险
@@ -451,61 +451,57 @@ evidence_root: ".data/test-runs"
 ### 7.1 初始化环境
 
 ```bash
-# 1. 创建 venv 并安装所有 first-test 依赖
+# 1. 构建并启动 ai-voiceclone 容器
 ./scripts/bootstrap_env.sh
 
-# 2. 激活虚拟环境
-source venv/bin/activate
+# 2. 初始化数据库
+docker exec ai-voiceclone python -m myvoiceclone.cli init-db
 
-# 3. 初始化数据库
-myvoiceclone init-db
-
-# 4. 验证 sqlite-vec 加载
-myvoiceclone vec-health
+# 3. 验证 sqlite-vec 加载
+docker exec ai-voiceclone python -m myvoiceclone.cli vec-health
 ```
+
+容器内 console script 等价命令为 `myvoiceclone init-db` 与 `myvoiceclone run preprocess-all /app/data/raw/sample.wav`；NF1 后这些命令必须在 `ai-voiceclone` 容器内执行。
 
 ### 7.2 运行测试
 
 ```bash
 # 默认套件（unit + api + cli + integration）
-./venv/bin/python -m pytest -q
+docker exec ai-voiceclone python -m pytest -q
 
 # 全部测试（包含 live/gpu/slow）
-./venv/bin/python -m pytest -q -m ""
+docker exec ai-voiceclone python -m pytest -q -m ""
 
 # 仅单元测试
-./venv/bin/python -m pytest -q -m unit
+docker exec ai-voiceclone python -m pytest -q -m unit
 
 # 仅 API 测试
-./venv/bin/python -m pytest -q -m api
+docker exec ai-voiceclone python -m pytest -q -m api
 
 # 查看跳过原因
-./venv/bin/python -m pytest -q -rs
+docker exec ai-voiceclone python -m pytest -q -rs
 ```
 
 ### 7.3 启动 API
 
 ```bash
-# 方式 1：uvicorn
-./venv/bin/uvicorn myvoiceclone.api.app:create_app --reload --host 0.0.0.0 --port 8000
-
-# 方式 2：fastapi CLI
-./venv/bin/fastapi dev src/myvoiceclone/api/app.py
+# API 由 ai-voiceclone 容器常驻启动，唯一宿主端口为 658
+curl http://127.0.0.1:658/health
 ```
 
 ### 7.4 CLI 常用流程
 
 ```bash
 # 1. 预处理单个音频
-myvoiceclone ingest /path/to/audio.wav
+docker exec ai-voiceclone python -m myvoiceclone.cli ingest /app/data/raw/audio.wav
 # 或端到端预处理
-myvoiceclone run preprocess-all /path/to/audio.wav
+docker exec ai-voiceclone python -m myvoiceclone.cli run preprocess-all /app/data/raw/audio.wav
 
 # 2. 单独运行 diarize
-myvoiceclone run diarize <RECORDING_ID>
+docker exec ai-voiceclone python -m myvoiceclone.cli run diarize <RECORDING_ID>
 
 # 3. 查看待审 segment
-myvoiceclone curate list
+docker exec ai-voiceclone python -m myvoiceclone.cli curate list
 
 # 4. 标记 segment 状态
 myvoiceclone curate mark <SEGMENT_ID> --status keep --reason "quality OK"
@@ -535,17 +531,15 @@ cp .env.example .env
 # 编辑 .env：填写 HUGGINGFACE_TOKEN，数据路径保持默认 .data/ 即可
 mkdir -p .data/{db,artifacts,models,test-runs,raw}
 
-# 1. 构建并运行预处理容器
-docker compose -f infra/docker/compose.yaml build preprocess
-MOCK_ADAPTERS=true docker compose -f infra/docker/compose.yaml run --rm preprocess ingest /app/data/raw/sample.wav
+# 1. 构建并运行唯一 ai-voiceclone 容器
+docker compose -f infra/docker/compose.voiceclone.yaml build ai-voiceclone
+docker compose -f infra/docker/compose.voiceclone.yaml up -d ai-voiceclone
 
-# 2. 构建并运行训练容器（需要 NVIDIA Container Toolkit）
-docker compose -f infra/docker/compose.yaml build train
+# 2. 需要验证 mock 流程时显式打开 mock
+MOCK_ADAPTERS=true docker compose -f infra/docker/compose.voiceclone.yaml up -d ai-voiceclone
+docker exec ai-voiceclone python -m myvoiceclone.cli run preprocess-all /app/data/raw/sample.wav
 
-# 3. 需要验证 mock So-VITS 时显式打开 mock
-MOCK_ADAPTERS=true docker compose -f infra/docker/compose.yaml run --rm train train sovits my_dataset
-
-# 4. 真实 XTTS 推理见下一节；默认 MOCK_ADAPTERS=false
+# 3. 真实 XTTS 推理见下一节；默认 MOCK_ADAPTERS=false
 ```
 
 ### 7.6 真实 XTTS 推理实战记录
@@ -554,8 +548,7 @@ MOCK_ADAPTERS=true docker compose -f infra/docker/compose.yaml run --rm train tr
 
 已验证的本地状态：
 
-- `docker-train:latest` 可复用，约 12.8GB。
-- `docker-preprocess:latest` 可复用，约 688MB。
+- `ai-voiceclone:cu130` 是 NF1 后的专用运行镜像。
 - 运行时数据统一在 `.data/`，旧的根目录 `data/`、`models/` 不再使用。
 - XTTS-v2 缓存在 `.data/models/coqui/tts/tts_models--multilingual--multi-dataset--xtts_v2/`。
 - `model.pth` SHA256：`c7ea20001c6a0a841c77e252d8409f6a74fb423e79b3206a0771ba5989776187`。
@@ -565,9 +558,9 @@ MOCK_ADAPTERS=true docker compose -f infra/docker/compose.yaml run --rm train tr
 真实推理命令：
 
 ```bash
-docker compose -f infra/docker/compose.yaml run --rm \
+docker compose -f infra/docker/compose.voiceclone.yaml run --rm \
   -e COQUI_TOS_AGREED=1 \
-  train infer real \
+  ai-voiceclone python -m myvoiceclone.cli infer real \
   --text "This is a real XTTS inference test." \
   --reference-artifact-id <REFERENCE_AUDIO_ARTIFACT_ID> \
   --language en
@@ -582,13 +575,13 @@ docker compose -f infra/docker/compose.yaml run --rm \
 | Coqui TOS 非交互确认 | 容器内报 `EOF when reading a line` | 推理命令加入 `-e COQUI_TOS_AGREED=1` |
 | Hugging Face 大文件下载不稳定 | 自动下载 `model.pth` 失败或下载到不完整文件 | 用 `aria2c --continue=true --split=16` 下载签名 URL，并以 SHA256 校验为准 |
 | Python 3.12 / aarch64 依赖冲突 | `TTS` 包不可用，Coqui 拉到不兼容依赖 | 使用当前 Dockerfile 固定组合：`coqui-tts==0.27.5`、`torch==2.12.0`、`torchaudio==2.11.0 --no-deps`、`transformers==4.57.3`、`torchcodec==0.14.0` |
-| compose 未读取根目录 `.env` | 不显式传 `MOCK_ADAPTERS=false` 时生成 mock artifact | compose 默认值已改为 `${MOCK_ADAPTERS:-false}`；用 `docker compose -f infra/docker/compose.yaml config \| rg MOCK_ADAPTERS` 验证 |
+| compose 未读取根目录 `.env` | 不显式传 `MOCK_ADAPTERS=false` 时生成 mock artifact | compose 默认值已改为 `${MOCK_ADAPTERS:-false}`；用 `docker compose -f infra/docker/compose.voiceclone.yaml config \| rg MOCK_ADAPTERS` 验证 |
 | 静音参考音频 | Coqui 提示 `Max=0.00 min=0.00`，推理能成功但没有克隆意义 | 换成非静音、干净、授权的人声 WAV |
 
 验证最新输出：
 
 ```bash
-./venv/bin/python - <<'PY'
+docker exec ai-voiceclone python - <<'PY'
 import json, os, sqlite3, wave
 
 conn = sqlite3.connect(".data/db/myvoiceclone.sqlite")
@@ -622,7 +615,7 @@ ID 合约：
 
 ```bash
 # 1. 启动 API
-./venv/bin/uvicorn myvoiceclone.api.app:create_app --host 0.0.0.0 --port 8000
+docker exec ai-voiceclone python -m uvicorn myvoiceclone.api.app:create_app --host 0.0.0.0 --port 8000
 
 # 2. 创建 run
 RUN_ID=$(curl -s -X POST http://127.0.0.1:8000/api/runs \
@@ -693,15 +686,15 @@ internal_error
 接口测试文档/回归入口：
 
 ```bash
-./venv/bin/python -m pytest tests/api/test_voice_clone_api_flow.py -q
-./venv/bin/python -m pytest tests/unit/test_ids.py tests/unit/storage/test_schema_drift.py -q
+docker exec ai-voiceclone python -m pytest tests/api/test_voice_clone_api_flow.py -q
+docker exec ai-voiceclone python -m pytest tests/unit/test_ids.py tests/unit/storage/test_schema_drift.py -q
 ```
 
 ### 7.8 Evidence 收集
 
 ```bash
 # 收集 skipped evidence
-RUN_ID=$(./venv/bin/python - <<'PY'
+RUN_ID=$(docker exec ai-voiceclone python - <<'PY'
 from myvoiceclone.ids import new_id
 print(new_id())
 PY
@@ -711,14 +704,14 @@ RUN_ID="$RUN_ID" \
 ./scripts/collect_first_test_evidence.sh
 
 # 校验 evidence pack
-./venv/bin/python -m myvoiceclone.evidence validate \
+docker exec ai-voiceclone python -m myvoiceclone.evidence validate \
   ".data/test-runs/$RUN_ID" \
   --repo-root .
 
 # 真实 capstone（需要合法短音频、模型、cache、token）
 RUN_FIRST_TEST_CAPSTONE=1 \
 FIRST_TEST_AUDIO_PATH=/path/to/legal_short.wav \
-./venv/bin/python -m pytest tests/integration/test_first_test_capstone.py -m live -q -rs
+docker exec ai-voiceclone python -m pytest tests/integration/test_first_test_capstone.py -m live -q -rs
 ```
 
 ### 7.9 其他实用命令
@@ -733,6 +726,6 @@ FIRST_TEST_AUDIO_PATH=/path/to/legal_short.wav \
 ./scripts/run_train_sovits.sh my_dataset --dry-run
 
 # 代码检查（dev 依赖已安装）
-./venv/bin/ruff check src tests
-./venv/bin/mypy src
+docker exec ai-voiceclone ruff check src tests
+docker exec ai-voiceclone mypy src
 ```

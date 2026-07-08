@@ -2,10 +2,10 @@
 set -euo pipefail
 
 RUN_ID="${RUN_ID:-first-test-$(date -u +%Y%m%dT%H%M%SZ)}"
-EVIDENCE_ROOT="${EVIDENCE_ROOT:-.data/test-runs}"
+EVIDENCE_ROOT="${EVIDENCE_ROOT:-/app/test-runs}"
 ADAPTER_MODE="${ADAPTER_MODE:-real}"
 STATUS="${STATUS:-collected}"
-PYTHON_BIN="${PYTHON_BIN:-./venv/bin/python}"
+CONTAINER="${CONTAINER:-ai-voiceclone}"
 
 args=(
   -m myvoiceclone.evidence collect
@@ -27,6 +27,6 @@ if [[ -n "${SKIP_REASON:-}" ]]; then
   args+=(--skip-reason "$SKIP_REASON")
 fi
 
-PACK_DIR="$("$PYTHON_BIN" "${args[@]}")"
-"$PYTHON_BIN" -m myvoiceclone.evidence validate "$PACK_DIR" --repo-root "$(pwd)"
+PACK_DIR="$(docker exec "$CONTAINER" python "${args[@]}")"
+docker exec "$CONTAINER" python -m myvoiceclone.evidence validate "$PACK_DIR" --repo-root /app
 echo "$PACK_DIR"

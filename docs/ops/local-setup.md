@@ -1,85 +1,102 @@
 # Local Setup and Developer Onboarding Guide
 
-This guide describes how to set up `myvoiceclone` locally, configure the system, and execute it using Docker containers.
+This guide describes the NF1 container-only runtime for `myvoiceclone`.
 
----
+## 1. Runtime Contract
 
-## 1. Installation
+`myvoiceclone` is not run from a host Python virtual environment. The host provides only:
 
-### 1.1 Prerequisites
-- Python 3.10+ (Python 3.12 recommended)
-- `ffmpeg` installed on your system path
-- SQLite (supported natively in Python)
+- the Git checkout,
+- Docker and the NVIDIA container runtime,
+- bind-mounted runtime data under `.data/`,
+- the external API port `658`.
 
-### 1.2 Virtual Environment Setup
-Run the bootstrap script to create a virtualenv and install the package in editable mode:
+All application commands run inside the dedicated `ai-voiceclone` container.
+
+## 2. Build and Start
+
 ```bash
 ./scripts/bootstrap_env.sh
-source venv/bin/activate
 ```
 
----
+Equivalent explicit commands:
 
-## 2. Configuration (`configs/local.yaml`)
-
-The file `configs/local.yaml` controls local workspace directories, database location, and security flags.
-
-### Configuration Fields:
-- `db_path`: Path to SQLite database file. Defaults to `db/myvoiceclone.sqlite`.
-- `artifact_root`: Storage location for audio files and training checkpoints. Defaults to `data/artifacts`.
-- `models_dir`: Target directory for downloaded base model weights. Defaults to `models`.
-- `security.enabled`: Set `true` to enable local release gate policy checking. Defaults to `false`.
-
-Example:
-```yaml
-db_path: "db/myvoiceclone.sqlite"
-artifact_root: "data/artifacts"
-models_dir: "models"
-security:
-  enabled: true
-```
-
----
-
-## 3. Mock Mode vs. Live GPU Mode
-
-`myvoiceclone` adopts a decoupling architecture:
-- **Mock Mode (Default & Testing)**:
-  - All neural network processing modules (pyannote, Demucs, Whisper, RVC, So-VITS, XTTS) run via fake mock adapters.
-  - This mode requires zero GPU, zero neural weights, and executes instantly.
-  - Recommended for unit tests, pipeline debugging, API/CLI development, and system integrations.
-- **Live GPU Mode**:
-  - Requires GPU hardware acceleration, CUDA drivers, and base models downloaded under `models/base`.
-  - To run in live mode, execute CLI commands or start the API with actual model configs.
-
-To download model weights:
 ```bash
-./scripts/download_models.sh
+docker compose -f infra/docker/compose.voiceclone.yaml build ai-voiceclone
+docker compose -f infra/docker/compose.voiceclone.yaml up -d ai-voiceclone
 ```
 
----
+The API listens on the host at:
 
-## 4. Docker Container Execution
-
-You can build and execute the preprocessing and training pipelines inside isolated Docker containers using the provided Compose configuration.
-
-### 4.1 Set Environment Variables (`.env`)
-Create a `.env` file in the project root:
-```env
-DB_PATH=/mnt/usb/workspace/myvoiceresearch/myvoiceclone.sqlite
-ARTIFACT_ROOT=/mnt/usb/workspace/myvoiceresearch/artifacts
-MODELS_DIR=/mnt/usb/workspace/myvoiceresearch/models
-MOCK_ADAPTERS=true
-```
-
-### 4.2 Run Preprocessing Container
 ```bash
-docker compose -f infra/docker/compose.yaml build preprocess
-docker compose -f infra/docker/compose.yaml run preprocess ingest /app/data/raw/my_sample.wav
+curl http://127.0.0.1:658/health
 ```
 
-### 4.3 Run Training Container (with NVIDIA GPU Access)
-```bash
-docker compose -f infra/docker/compose.yaml build train
-docker compose -f infra/docker/compose.yaml run train train sovits --dataset my_dataset
+Expected response:
+
+```json
+{"status":"healthy","version":"1.0.0"}
 ```
+
+## 3. Container CLI
+
+Run CLI commands via `docker exec`:
+
+```bash
+docker exec ai-voiceclone python -m myvoiceclone.cli init-db
+docker exec ai-voiceclone python -m myvoiceclone.cli vec-health
+docker exec ai-voiceclone python -m myvoiceclone.cli run preprocess-all /app/data/raw/sample.wav
+docker exec ai-voiceclone python -m myvoiceclone.cli train sovits my_dataset
+```
+
+The helper scripts are wrappers around the same container boundary:
+
+```bash
+./scripts/run_preprocess.sh /app/data/raw/sample.wav
+./scripts/run_train_sovits.sh my_dataset
+```
+
+## 4. Data and Configuration
+
+The compose file mounts project-local runtime data:
+
+| Host path | Container path |
+|---|---|
+| `.data/db` | `/app/.data/db` |
+| `.data/artifacts` | `/app/data/artifacts` |
+| `.data/raw` | `/app/data/raw` |
+| `.data/models` | `/app/models` |
+| `.data/test-runs` | `/app/test-runs` |
+| `configs` | `/app/configs:ro` |
+
+The service publishes only:
+
+```text
+0.0.0.0:658 -> 658/tcp
+```
+
+No SSH, debug, vLLM, or auxiliary ports are part of the `myvoiceclone` runtime contract.
+
+## 5. Mock Mode vs. Real Mode
+
+`MOCK_ADAPTERS=false` is the default in the compose runtime. For offline mock workflows:
+
+```bash
+MOCK_ADAPTERS=true docker compose -f infra/docker/compose.voiceclone.yaml up -d ai-voiceclone
+```
+
+Known real-mode limits remain unchanged by NF1:
+
+- Real XTTS inference can run only when Coqui/Torch/model cache requirements are satisfied.
+- Real So-VITS/RVC training is still not implemented in the current adapters.
+- Objective quality metrics are still placeholder/mock unless a later live-eval plan replaces them.
+
+## 6. Tests
+
+Run tests inside the container:
+
+```bash
+docker exec ai-voiceclone python -m pytest -q
+```
+
+Host Python test execution is not a valid NF1 closure signal.
